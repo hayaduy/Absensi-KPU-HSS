@@ -8,12 +8,13 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS: MOBILE & TABLE OPTIMIZED ---
+# --- CSS: KEMBALI KE LAYOUT RAPI & TOMBOL BULAT ---
 st.markdown("""
     <style>
     .centered { text-align: center; width: 100%; }
     .clock-style { font-size: 60px; color: #3498db; font-weight: bold; margin-bottom: 0px; }
     
+    /* Input Tanggal & Tombol Cek di Tengah */
     div[data-testid="stDateInput"] { margin: 0 auto; width: 85% !important; }
     div.stButton > button:first-child {
         background-color: #d35400 !important;
@@ -27,18 +28,24 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    [data-testid="stVerticalBlock"] > div:nth-child(even) {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 5px;
+    /* Container Baris Zebra */
+    .row-container {
+        border-bottom: 1px solid #444;
+        padding: 10px 0;
+        display: flex;
+        align-items: center;
     }
 
-    .stButton button {
+    /* Tombol P & S Bulat Besar */
+    .stButton button[kind="primary"], .stButton button[kind="secondary"] {
         border-radius: 50% !important;
-        width: 48px !important;
-        height: 48px !important;
+        width: 50px !important;
+        height: 50px !important;
         font-weight: bold !important;
-        font-size: 16px !important;
+        font-size: 18px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
         margin: 0 auto !important;
     }
     </style>
@@ -55,7 +62,7 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-# --- ZONA WAKTU ---
+# --- TIME SETUP ---
 wita_now = datetime.now() + timedelta(hours=8)
 is_pagi_time = wita_now.hour < 11
 
@@ -63,62 +70,68 @@ st.markdown("<h3 class='centered'>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_
 st.markdown(f"<div class='centered clock-style'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
 tgl_pilihan = st.date_input("Pilih Tanggal", wita_now.date(), label_visibility="collapsed")
-if st.button("🔍 CEK ABSEN"): st.rerun()
+if st.button("🔍 CEK DATA ABSENSI"): st.rerun()
 
 def fetch_data(url):
     try:
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        # Kita biarkan datanya apa adanya (String), jangan dipaksa ke Datetime dulu di sini
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
-def kirim_absen(url, nama, sesi):
+def kirim_data_google(url, nama, tipe):
+    # Header palsu agar Google Form tidak curiga (Bot Prevention)
+    header = {'Content-Type': 'application/x-www-form-urlencoded'}
+    payload = {"entry.960346359": nama}
     try:
-        requests.post(url, data={"entry.960346359": nama}, timeout=10)
-        st.toast(f"✅ BERHASIL {sesi}: {nama.split(',')[0]}!")
-        time.sleep(0.5)
-        st.rerun()
-    except: st.error("Gagal kirim data.")
+        res = requests.post(url, data=payload, headers=header, timeout=10)
+        if res.status_code == 200:
+            st.toast(f"✅ ABSEN {tipe} BERHASIL: {nama.split(',')[0]}!")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error(f"Error {res.status_code}. Coba lagi.")
+    except:
+        st.error("Gagal kirim. Cek sinyal!")
 
 def render_list(df, master, form_url, prefix):
-    t_m = datetime.strptime("09:00", "%H:%M").time()
-    t_p = datetime.strptime("16:00", "%H:%M").time()
+    t_masuk_batas = datetime.strptime("09:00", "%H:%M").time()
+    t_pulang_mulai = datetime.strptime("16:00", "%H:%M").time()
     log = {}
     
     if not df.empty:
-        # LOGIKA BARU: Kita filter manual tanpa menggunakan .dt (Anti Error)
-        target_str = tgl_pilihan.strftime('%d/%m/%Y') # Sesuaikan format Sheets
-        target_str_alt = tgl_pilihan.strftime('%Y-%m-%d')
+        tgl_target = tgl_pilihan.strftime('%d/%m/%Y')
+        tgl_target_alt = tgl_pilihan.strftime('%Y-%m-%d')
         
         for _, r in df.iterrows():
-            raw_val = str(r.iloc[0]) # Kolom Timestamp
-            # Cek apakah baris ini sesuai tanggal pilihan (cek kecocokan teks)
-            if target_str in raw_val or target_str_alt in raw_val:
+            ts = str(r.iloc[0])
+            if tgl_target in ts or tgl_target_alt in ts:
                 try:
-                    # Ambil jamnya saja secara manual
-                    dt_obj = pd.to_datetime(raw_val, dayfirst=True)
+                    dt_obj = pd.to_datetime(ts, dayfirst=True)
                     nama, jam = str(r.iloc[1]).strip(), dt_obj.time()
                     
                     if nama not in log:
-                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_m else "TLT"}
-                    elif jam >= t_p:
+                        # Logika Baru: Tetap catat jam Pagi meskipun lewat jam 9
+                        # Status HDR jika <= 09:00, TLT jika > 09:00 (sampai sebelum waktu pulang)
+                        status = "HDR" if jam <= t_masuk_batas else "TLT"
+                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": status}
+                    elif jam >= t_pulang_mulai:
                         log[nama]["p"] = jam.strftime("%H:%M")
-                except:
-                    continue
+                except: continue
 
-    # Header
+    # Header Tabel
     st.write("---")
-    h1, h2, h3, h4, h5, h6 = st.columns([0.5, 3.5, 1, 1, 1, 2.5])
+    h1, h2, h3, h4, h5, h6 = st.columns([0.6, 3.2, 1.2, 1.2, 1, 2.6])
     h1.write("**#**"); h2.write("**NAMA**"); h3.write("**PAGI**"); h4.write("**SORE**"); h5.write("**ST**"); h6.write("**AKSI**")
     
     for i, p in enumerate(sorted(master), 1):
         d = log.get(p.strip(), {"m": "--", "p": "--", "k": "ALPA"})
+        # Warna Status
         clr = "green" if d["k"]=="HDR" else "orange" if d["k"]=="TLT" else "red"
         
         with st.container():
-            c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3.5, 1, 1, 1, 2.5])
+            c1, c2, c3, c4, c5, c6 = st.columns([0.6, 3.2, 1.2, 1.2, 1, 2.6])
             c1.write(f"{i}")
             c2.write(f"**{p.split(',')[0]}**")
             c3.write(d["m"])
@@ -128,11 +141,11 @@ def render_list(df, master, form_url, prefix):
             with c6:
                 b1, b2 = st.columns(2)
                 with b1:
-                    if st.button("P", key=f"p_{prefix}_{i}", disabled=not is_pagi_time, type="primary" if is_pagi_time else "secondary"):
-                        kirim_absen(form_url, p, "PAGI")
+                    if st.button("P", key=f"p_{prefix}_{i}", disabled=not is_pagi_time):
+                        kirim_data_google(form_url, p, "PAGI")
                 with b2:
-                    if st.button("S", key=f"s_{prefix}_{i}", disabled=is_pagi_time, type="primary" if not is_pagi_time else "secondary"):
-                        kirim_absen(form_url, p, "SORE")
+                    if st.button("S", key=f"s_{prefix}_{i}", disabled=is_pagi_time):
+                        kirim_data_google(form_url, p, "SORE")
 
 tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
 with tab1: render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
