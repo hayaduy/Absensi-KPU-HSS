@@ -9,84 +9,82 @@ from io import StringIO
 # Konfigurasi Halaman
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: TIRU PERSIS IMAGE_94E843 ---
+# --- CSS: REPLIKA PERSIS IMAGE_94E40C ---
 st.markdown("""
     <style>
     /* Background Maroon Gelap */
     .stApp { background-color: #2d0a0a; color: #ffffff; }
     
     /* Header Section */
-    .header-container { 
-        text-align: center; padding: 25px 0; 
-        background: #1e293b; 
-        border-radius: 0 0 40px 40px; margin-bottom: 30px; 
-        border-bottom: 2px solid #38bdf8; 
-    }
+    .header-container { text-align: center; padding: 20px 0; margin-bottom: 20px; }
     .clock-text { font-size: 60px; font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
     
-    /* Control Center */
+    /* Control Center (Tanggal & Cari Data) */
     .stDateInput { width: 300px !important; margin: 0 auto !important; }
     div[data-testid="stDateInput"] label { display: none; }
+    div[data-testid="stDateInput"] > div { border-radius: 10px !important; background: #1e1e1e !important; color: white !important; }
     
-    /* Tombol CARI DATA (Tengah & Gede) */
+    /* Tombol CARI DATA (Pasti Tengah & Gede) */
     .stButton { display: flex; justify-content: center; }
     div.stButton > button:first-child { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; width: 350px !important; height: 65px !important; 
-        font-size: 20px !important; font-weight: 800 !important; border-radius: 20px !important;
-        margin: 15px auto !important; border: 1px solid #fb923c !important;
-        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.5) !important;
+        color: white !important; width: 450px !important; height: 70px !important; 
+        font-size: 22px !important; font-weight: 800 !important; border-radius: 25px !important;
+        margin: 20px auto !important; border: 1px solid #fb923c !important;
+        box-shadow: 0 0 20px rgba(234, 88, 12, 0.6) !important;
     }
 
     /* TABS (Gaya Gambar) */
-    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 5px; }
+    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 5px; border: none !important; }
     .stTabs [data-baseweb="tab"] { 
-        background-color: #4c0519 !important; border-radius: 10px 10px 0 0 !important; 
-        padding: 10px 25px !important; font-size: 14px !important; font-weight: 700 !important;
+        background-color: #4c0519 !important; border-radius: 12px 12px 0 0 !important; 
+        padding: 12px 35px !important; font-size: 15px !important; font-weight: 700 !important;
         color: #fca5a5 !important; border: none !important;
     }
     .stTabs [aria-selected="true"] { background-color: #f97316 !important; color: #ffffff !important; }
 
-    /* LAYOUT BARIS RAMPING (Persis Gambar) */
+    /* LAYOUT BARIS (Satu Garis Lurus) */
     .row-absensi {
         display: flex;
         flex-direction: row;
         align-items: center;
         background: linear-gradient(90deg, #4c0519 0%, #7f1d1d 100%);
-        padding: 10px 20px;
-        border-radius: 12px;
-        margin-bottom: 8px;
+        padding: 5px 20px;
+        border-radius: 15px;
+        margin-bottom: 10px;
         border: 1px solid #991b1b;
         justify-content: space-between;
+        min-height: 70px;
     }
 
     .col-nama { flex: 3; font-size: 16px; font-weight: 700; color: #fecaca; text-align: left; }
     
     .col-stats { 
-        flex: 4; display: flex; justify-content: space-around; 
-        text-align: center; border-left: 1px solid #991b1b; padding: 0 15px;
+        flex: 5; display: flex; justify-content: space-around; 
+        text-align: center; border-left: 1px solid #991b1b; padding: 0 20px;
     }
     .stat-item { flex: 1; }
-    .label-kecil { font-size: 8px; color: #fca5a5; text-transform: uppercase; margin-bottom: 2px; }
-    .val-besar { font-size: 14px; font-weight: 800; color: #ffffff; }
-    .status-text { font-size: 14px; font-weight: 800; }
+    .label-kecil { font-size: 9px; color: #fca5a5; text-transform: uppercase; margin-bottom: 2px; }
+    .val-besar { font-size: 15px; font-weight: 800; color: #ffffff; }
+    .status-text { font-size: 15px; font-weight: 800; }
 
-    /* TOMBOL ABSEN SAMPING */
-    .col-btn { flex: 1.5; display: flex; justify-content: flex-end; }
+    /* TOMBOL ABSEN SAMPING (Simetris) */
+    .col-btn { flex: 2; display: flex; justify-content: flex-end; height: 100%; }
     div[data-testid="column"]:nth-child(2) button {
-        background: linear-gradient(90deg, #f97316 0%, #c2410c 100%) !important; 
-        color: white !important; height: 45px !important; width: 100% !important;
-        border-radius: 12px !important; font-weight: 800 !important; font-size: 14px !important;
+        background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
+        color: white !important; height: 55px !important; width: 100% !important;
+        border-radius: 15px !important; font-weight: 800 !important; font-size: 16px !important;
         border: 1px solid #fb923c !important; margin: 0 !important;
+        box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3) !important;
     }
 
-    /* RESPONSIVE MOBILE FIX */
+    /* RESPONSIVE MOBILE */
     @media (max-width: 800px) {
-        .row-absensi { flex-wrap: wrap; padding: 15px; }
-        .col-nama { flex: 100%; margin-bottom: 10px; text-align: center; font-size: 18px; }
-        .col-stats { flex: 100%; border-left: none; border-top: 1px solid #991b1b; padding: 10px 0; }
-        .col-btn { flex: 100%; margin-top: 10px; }
-        div[data-testid="stDateInput"], div.stButton > button:first-child { width: 90% !important; }
+        .row-absensi { flex-direction: column; padding: 20px; text-align: center; gap: 15px; }
+        .col-nama { flex: 100%; font-size: 18px; text-align: center; }
+        .col-stats { flex: 100%; border-left: none; border-top: 1px solid #991b1b; padding-top: 15px; width: 100%; }
+        .col-btn { flex: 100%; width: 100%; }
+        div.stButton > button:first-child { width: 90% !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -105,11 +103,7 @@ E_ID = "960346359"
 
 # --- HEADER ---
 wita_now = datetime.now() + timedelta(hours=8)
-st.markdown(f"""
-    <div class="header-container">
-        <div class="clock-text">{wita_now.strftime('%H:%M:%S')}</div>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f'<div class="header-container"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
 # --- CENTERED CONTROLS ---
 tgl_pilihan = st.date_input("Tanggal", wita_now.date())
@@ -144,7 +138,7 @@ def render_list(df, master, form_url, prefix):
                     nama, jam = str(r.iloc[1]).strip(), dt.time()
                     if nama not in log:
                         log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if jam <= t_limit else "TERLAMBAT"}
-                    elif jam >= t_pulang: log[nama]["p"] = jam.strftime("%H:%M")
+                    elif jam >= t_out: log[nama]["p"] = jam.strftime("%H:%M")
                 except: continue
 
     st.markdown("<br>", unsafe_allow_html=True)
