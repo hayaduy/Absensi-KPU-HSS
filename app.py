@@ -8,27 +8,24 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS: TETAP HORIZONTAL & TOMBOL KOTAK ---
+# --- CSS: TETAP RAPI & HORIZONTAL ---
 st.markdown("""
     <style>
     .centered { text-align: center; width: 100%; }
     .clock-style { font-size: 50px; color: #3498db; font-weight: bold; margin-bottom: 5px; }
     
-    /* Tombol Cek Data Tengah */
     div.stButton > button:first-child {
         background-color: #d35400 !important; color: white !important;
         width: 85% !important; height: 55px !important; margin: 10px auto !important; 
         display: block !important; border-radius: 10px !important;
     }
 
-    /* Kunci Baris Horizontal */
     .stHorizontalBlock {
         display: flex !important; flex-direction: row !important;
         flex-wrap: nowrap !important; align-items: center !important;
         border-bottom: 1px solid #444; padding: 10px 0; min-width: 650px;
     }
 
-    /* Tombol P & S Kotak Gede */
     .stButton button[kind="primary"], .stButton button[kind="secondary"] {
         border-radius: 8px !important; width: 100% !important; height: 50px !important;
         font-weight: bold !important; font-size: 18px !important;
@@ -42,11 +39,10 @@ MASTER_DATA = {
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
 }
 
-# Link CSV Monitoring
 URL_CSV_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_CSV_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 
-# Konfigurasi Google Form
+# Entry ID yang Abang temukan: 960346359
 E_ID = "960346359"
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
@@ -65,23 +61,31 @@ def fetch_data(url):
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
-# MESIN REDIRECT CEPAT (ANTI ERROR 400)
-def kirim_absen(form_url, nama):
+# MESIN OTOMATIS JALUR BROWSER (ANTI STUCK)
+def kirim_absen_stealth(form_url, nama):
     import urllib.parse
     enc_nama = urllib.parse.quote(nama)
-    # URL Submit Langsung
     final_url = f"{form_url}?entry.{E_ID}={enc_nama}&submit=Submit"
     
-    st.info(f"⏳ Mengirim Absen {nama.split(',')[0]}...")
+    # Notifikasi
+    st.success(f"🚀 Memproses Absen: {nama.split(',')[0]}...")
     
-    # JavaScript untuk buka link di tab yang sama dan langsung submit
-    js = f"""
+    # JavaScript: Nembak data lewat Background Fetch (Ga perlu loncat halaman)
+    js_code = f"""
     <script>
-        window.location.href = "{final_url}";
+    fetch("{final_url}", {{
+        method: "POST",
+        mode: "no-cors"
+    }}).then(() => {{
+        console.log("Absen Berhasil");
+    }});
     </script>
     """
-    st.components.v1.html(js, height=0)
+    st.components.v1.html(js_code, height=0)
+    
+    # Refresh otomatis setelah 2 detik biar data update di tabel
     time.sleep(2)
+    st.rerun()
 
 def render_view(df, master, form_url, prefix):
     t_batas, t_out = datetime.strptime("09:00", "%H:%M").time(), datetime.strptime("16:00", "%H:%M").time()
@@ -95,7 +99,6 @@ def render_view(df, master, form_url, prefix):
                     dt = pd.to_datetime(ts, dayfirst=True)
                     nama, jam = str(r.iloc[1]).strip(), dt.time()
                     if nama not in log:
-                        # Tetap catat Pagi meskipun lewat jam 9 (Status TLT)
                         log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_batas else "TLT"}
                     elif jam >= t_out: log[nama]["p"] = jam.strftime("%H:%M")
                 except: continue
@@ -111,9 +114,9 @@ def render_view(df, master, form_url, prefix):
         c1.write(i); c2.write(f"**{p.split(',')[0]}**")
         c3.write(d["m"]); c4.write(d["p"]); c5.markdown(f":{clr}[**{d['k']}**]")
         with c6:
-            if st.button("P", key=f"p_{prefix}_{i}"): kirim_absen(form_url, p)
+            if st.button("P", key=f"p_{prefix}_{i}"): kirim_absen_stealth(form_url, p)
         with c7:
-            if st.button("S", key=f"s_{prefix}_{i}"): kirim_absen(form_url, p)
+            if st.button("S", key=f"s_{prefix}_{i}"): kirim_absen_stealth(form_url, p)
 
 tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
 with tab1: render_view(fetch_data(URL_CSV_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
