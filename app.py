@@ -9,21 +9,17 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: ANTI-BLANK & SMOOTH SCROLL
+# 2. CSS: FULL FREEZE HEADER & STYLING
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
-    
-    /* Sembunyikan Header Bawaan */
     header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
 
-    /* --- STICKY HEADER AREA --- */
+    /* STICKY HEADER AREA */
     .top-fixed {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
+        top: 0; left: 0; right: 0;
         background-color: #1a0505;
         z-index: 1000;
         padding-top: 10px;
@@ -47,24 +43,21 @@ st.markdown("""
     .highlight { color: #facc15; font-weight: 800; }
     @keyframes scroll-left { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     
-    /* Input Tanggal Center */
     div[data-testid="stDateInput"] {
         width: 100% !important; max-width: 300px !important; margin: 5px auto !important;
         background: #2d0a0a; border: 2px solid #f97316; border-radius: 12px;
     }
     div[data-testid="stDateInput"] input { color: #ffffff !important; text-align: center !important; font-size: 18px !important; }
 
-    /* Tab Menu Style */
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; background-color: #1a0505 !important; }
 
-    /* --- AREA KONTEN (SCROLLABLE) --- */
+    /* CONTENT SCROLL AREA */
     .content-wrapper {
-        margin-top: 380px; /* Jarak agar konten tidak tertutup header */
+        margin-top: 380px; 
         padding: 0 10px 100px 10px;
     }
     @media (max-width: 768px) { .content-wrapper { margin-top: 320px; } }
 
-    /* Baris Pegawai */
     .row-container {
         display: flex; flex-direction: column; 
         background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
@@ -93,8 +86,8 @@ MASTER_PNS = ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S
 MASTER_PPPK = ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
 MASTER_ALL = MASTER_PNS + MASTER_PPPK
 
-# 4. DATA ENGINE
-def get_data(url):
+# 4. ENGINE FUNGSI
+def fetch_data(url):
     try:
         r = requests.get(f"{url}&nc={random.random()}", timeout=10).text
         df = pd.read_csv(StringIO(r))
@@ -102,28 +95,10 @@ def get_data(url):
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
-wita_now = datetime.now() + timedelta(hours=8)
-
-# 5. FIXED HEADER (STABIL)
-st.markdown('<div class="top-fixed">', unsafe_allow_html=True)
-jam_area = st.empty()
-st.markdown(f"""
-    <div class="running-text-container">
-        <div class="running-text">
-            ABSENSI KPU HSS &nbsp; • &nbsp; <span class="highlight">Silahkan Cek Kehadiran hari ini yaa, yang belum absen bisa klik di bagian Nama masing-masing</span> &nbsp; • &nbsp; ABSENSI KPU HSS
-        </div>
-    </div>
-""", unsafe_allow_html=True)
-tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
-tab1, tab2, tab3 = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
-st.markdown('</div>', unsafe_allow_html=True)
-
-# 6. RENDER CONTENT
 def process_log(df, tgl):
     log = {}
     if not df.empty:
-        target = pd.Timestamp(tgl)
-        df_today = df[df.iloc[:, 0].dt.normalize() == target]
+        df_today = df[df.iloc[:, 0].dt.normalize() == pd.Timestamp(tgl)]
         for _, r in df_today.sort_values(by=df.columns[0]).iterrows():
             ts = r.iloc[0]; nama = str(r.iloc[1]).strip().replace("  ", " ")
             if nama not in log:
@@ -131,8 +106,24 @@ def process_log(df, tgl):
             if ts.hour >= 15: log[nama]["p"] = ts.strftime("%H:%M")
     return log
 
-def render_ui(log, master, is_all=False):
-    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+wita_now = datetime.now() + timedelta(hours=8)
+
+# 5. FIXED HEADER
+st.markdown('<div class="top-fixed">', unsafe_allow_html=True)
+jam_placeholder = st.empty()
+st.markdown(f"""
+    <div class="running-text-container">
+        <div class="running-text">
+            ABSENSI KPU HSS • <span class="highlight">Silahkan Cek Kehadiran hari ini yaa, yang belum absen bisa klik di bagian Nama masing-masing</span> • ABSENSI KPU HSS
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+tabs = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
+st.markdown('</div>', unsafe_allow_html=True)
+
+# 6. RENDER LOGIC
+def render_list(log, master, is_all=False):
     items = []
     for idx, n in enumerate(master):
         nama = n.strip().replace("  ", " "); d = log.get(nama, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
@@ -147,8 +138,8 @@ def render_ui(log, master, is_all=False):
     
     for it in items:
         n = it["n"]; d = it["d"]; cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
-        target_f = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if n in MASTER_PNS else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
-        link = f"{target_f}?entry.960346359={n.replace(' ', '+')}&submit=Submit"
+        form = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if n in MASTER_PNS else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
+        link = f"{form}?entry.960346359={n.replace(' ', '+')}&submit=Submit"
         st.markdown(f"""
             <div class="row-container">
                 <div class="col-nama"><div class="name-box"><a href="{link}" target="_blank">{n.split(',')[0]}</a></div></div>
@@ -159,20 +150,31 @@ def render_ui(log, master, is_all=False):
                 </div>
             </div>
         """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # 7. EXECUTION
-log_pns = process_log(get_data(URL_PNS), tgl_pilihan)
-log_pppk = process_log(get_data(URL_PPPK), tgl_pilihan)
+URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
+URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
+
+log_pns = process_log(fetch_data(URL_PNS), tgl_pilihan)
+log_pppk = process_log(fetch_data(URL_PPPK), tgl_pilihan)
 log_all = {**log_pns, **log_pppk}
 
-with tab1: render_ui(log_all, MASTER_ALL, True)
-with tab2: render_ui(log_pns, MASTER_PNS)
-with tab3: render_ui(log_pppk, MASTER_PPPK)
+with tabs[0]: 
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+    render_list(log_all, MASTER_ALL, True)
+    st.markdown('</div>', unsafe_allow_html=True)
+with tabs[1]:
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+    render_list(log_pns, MASTER_PNS)
+    st.markdown('</div>', unsafe_allow_html=True)
+with tabs[2]:
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+    render_list(log_pppk, MASTER_PPPK)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # 8. REALTIME LOOP
 while True:
     now = datetime.now() + timedelta(hours=8)
-    jam_area.markdown(f'<div class="header-jam"><div class="clock-text">{now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
+    jam_placeholder.markdown(f'<div class="header-jam"><div class="clock-text">{now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
     if now.second == 0: st.rerun()
     time.sleep(1)
