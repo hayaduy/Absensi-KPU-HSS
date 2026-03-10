@@ -28,10 +28,11 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(234, 88, 12, 0.4) !important; margin-top: 15px;
     }
 
-    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 5px; border: none !important; }
+    /* Memastikan Tab terlihat jelas */
+    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 10px; border: none !important; }
     .stTabs [data-baseweb="tab"] { 
-        background-color: #4c0519 !important; border-radius: 12px 12px 0 0 !important; 
-        padding: 12px 40px !important; color: #fca5a5 !important;
+        background-color: #4c0519 !important; border-radius: 10px 10px 0 0 !important; 
+        padding: 10px 30px !important; color: #fca5a5 !important;
     }
     .stTabs [aria-selected="true"] { background-color: #f97316 !important; color: #ffffff !important; }
 
@@ -62,11 +63,12 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# 4. JAM & KONTROL
+# 4. JAM (WITA)
 wita_now = datetime.now() + timedelta(hours=8)
 st.markdown(f'<div class="header-jam"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-# 5. FUNGSI LOGIKA
+# 5. FUNGSI AMBIL DATA
+@st.cache_data(ttl=60) # Cache 1 menit agar tidak berat saat berpindah tab
 def fetch_data(url):
     try:
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
@@ -105,81 +107,60 @@ def render_list(df, master, form_url, tgl_pilihan):
         link = f"{form_url}?entry.{E_ID}={p.replace(' ', '+')}&submit=Submit"
         st.markdown(f'<div class="row-container"><div class="col-nama"><a href="{link}" target="_self">{i}. {p.split(",")[0]}</a></div><div class="col-data-wrap"><div class="item-box"><div class="label-k">Pagi</div><div class="val-v">{d["m"]}</div></div><div class="item-box"><div class="label-k">Sore</div><div class="val-v">{d["p"]}</div></div><div class="item-box"><div class="label-k">Ket</div><div style="color:{clr}; font-weight:900;">{d["k"]}</div></div></div></div>', unsafe_allow_html=True)
 
-# 6. TABS LAYOUT
-tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed", key="global_date")
-tab1, tab2, tab3 = st.tabs(["👥 PNS", "👥 PPPK", "📊 REKAP BULANAN"])
+# 6. DEFINISI TAB & INPUT (UTAMA)
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+
+# DEFINE TABS
+tabs = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK", "📊 REKAP BULANAN"])
 
 df_pns = fetch_data(URL_PNS)
 df_pppk = fetch_data(URL_PPPK)
 
-with tab1:
+# ISI TAB 1: PNS
+with tabs[0]:
     render_list(df_pns, MASTER_DATA["PNS"], FORM_PNS, tgl_pilihan)
 
-with tab2:
+# ISI TAB 2: PPPK
+with tabs[1]:
     render_list(df_pppk, MASTER_DATA["PPPK"], FORM_PPPK, tgl_pilihan)
 
-with tab3:
-    st.markdown("### 📊 Rekapitulasi Kehadiran Pegawai")
-    
-    # Bagian Kontrol Rekap (Bulan, Tahun, Sorting)
-    # Dibagi menjadi 2 baris agar rapi di mobile/web
-    row1_col1, row1_col2 = st.columns(2)
-    with row1_col1:
-        bulan = st.selectbox("Pilih Bulan", list(range(1, 13)), index=wita_now.month-1, key="sel_bulan")
-    with row1_col2:
-        tahun = st.selectbox("Pilih Tahun", [2024, 2025, 2026], index=2, key="sel_tahun")
-    
-    row2_col1, row2_col2 = st.columns(2)
-    with row2_col1:
-        # INI DROPDOWN SORTINGNYA
-        sort_by = st.selectbox("Urutkan Tabel Berdasarkan:", 
-                               ["Total Hadir", "Hadir Tepat", "Terlambat", "Nama Pegawai"], 
-                               key="sel_sort")
-    
+# ISI TAB 3: REKAP
+with tabs[2]:
+    st.markdown("### 📊 Rekap Kehadiran Bulanan")
+    col_a, col_b, col_c = st.columns(3)
+    with col_a: b_pilih = st.selectbox("Bulan", list(range(1, 13)), index=wita_now.month-1)
+    with col_b: t_pilih = st.selectbox("Tahun", [2024, 2025, 2026], index=2)
+    with col_c: s_pilih = st.selectbox("Urutan", ["Total Hadir", "Nama Pegawai", "Terlambat"])
+
     all_data = pd.concat([df_pns, df_pppk])
     if not all_data.empty:
-        report_df = all_data[(all_data.iloc[:, 0].dt.month == bulan) & (all_data.iloc[:, 0].dt.year == tahun)].copy()
-        report_df['Nama'] = report_df.iloc[:, 1].str.strip()
-        report_df['Jam'] = report_df.iloc[:, 0].dt.hour
+        # Filter Data
+        rep = all_data[(all_data.iloc[:, 0].dt.month == b_pilih) & (all_data.iloc[:, 0].dt.year == t_pilih)].copy()
+        rep['Nama'] = rep.iloc[:, 1].str.strip()
+        rep['Jam'] = rep.iloc[:, 0].dt.hour
         
-        rekap = []
-        for kategori, daftar in MASTER_DATA.items():
-            for nama in daftar:
-                p_data = report_df[report_df['Nama'] == nama.strip()]
+        rekap_list = []
+        for k, daftar in MASTER_DATA.items():
+            for n in daftar:
+                p_data = rep[rep['Nama'] == n.strip()]
                 h_tepat = p_data[p_data['Jam'] < 9].iloc[:, 0].dt.date.nunique()
                 h_telat = p_data[p_data['Jam'] >= 9].iloc[:, 0].dt.date.nunique()
-                rekap.append({
-                    "Nama Pegawai": nama,
-                    "Kategori": kategori,
-                    "Hadir Tepat": h_tepat,
-                    "Terlambat": h_telat,
-                    "Total Hadir": h_tepat + h_telat
-                })
+                rekap_list.append({"Nama Pegawai": n, "Hadir Tepat": h_tepat, "Terlambat": h_telat, "Total Hadir": h_tepat + h_telat})
         
-        final_rekap = pd.DataFrame(rekap)
+        df_rekap = pd.DataFrame(rekap_list)
+        df_rekap = df_rekap.sort_values(by=s_pilih, ascending=(False if s_pilih != "Nama Pegawai" else True))
         
-        # Eksekusi Sorting
-        final_rekap = final_rekap.sort_values(by=sort_by, ascending=(False if sort_by != "Nama Pegawai" else True))
+        st.dataframe(df_rekap, use_container_width=True, hide_index=True)
         
-        # Tampilkan Tabel
-        st.dataframe(final_rekap, use_container_width=True, hide_index=True)
-        
-        # Tombol Download diletakkan di kolom sebelah kanan baris 2
-        with row2_col2:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True) # Spacer
-            csv = final_rekap.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 DOWNLOAD CSV",
-                data=csv,
-                file_name=f'rekap_absen_{bulan}_{tahun}.csv',
-                mime='text/csv',
-                use_container_width=True
-            )
-    else:
-        st.warning("Data tidak ditemukan untuk periode ini.")
+        # Download Button
+        csv = df_rekap.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download CSV", data=csv, file_name=f"rekap_{b_pilih}_{t_pilih}.csv", mime="text/csv")
 
-if st.button("🔍 REFRESH SISTEM"):
+# Tombol Cari / Refresh
+if st.button("🔍 CARI / REFRESH DATA"):
     st.rerun()
 
+# 7. AUTO REFRESH (HANYA BERJALAN JIKA TIDAK SEDANG DI TAB REKAP)
+# Agar saat scroll rekap tidak tiba-tiba loncat ke atas
 time.sleep(30)
 st.rerun()
