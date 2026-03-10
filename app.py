@@ -106,7 +106,7 @@ def render_list(df, master, form_url, tgl_pilihan):
         st.markdown(f'<div class="row-container"><div class="col-nama"><a href="{link}" target="_self">{i}. {p.split(",")[0]}</a></div><div class="col-data-wrap"><div class="item-box"><div class="label-k">Pagi</div><div class="val-v">{d["m"]}</div></div><div class="item-box"><div class="label-k">Sore</div><div class="val-v">{d["p"]}</div></div><div class="item-box"><div class="label-k">Ket</div><div style="color:{clr}; font-weight:900;">{d["k"]}</div></div></div></div>', unsafe_allow_html=True)
 
 # 6. TABS LAYOUT
-tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed", key="global_date")
 tab1, tab2, tab3 = st.tabs(["👥 PNS", "👥 PPPK", "📊 REKAP BULANAN"])
 
 df_pns = fetch_data(URL_PNS)
@@ -120,13 +120,24 @@ with tab2:
 
 with tab3:
     st.markdown("### 📊 Rekapitulasi Kehadiran Pegawai")
-    c1, c2, c3 = st.columns([2, 2, 2])
-    with c1: bulan = st.selectbox("Bulan", list(range(1, 13)), index=wita_now.month-1)
-    with c2: tahun = st.selectbox("Tahun", [2024, 2025, 2026], index=2)
+    
+    # Bagian Kontrol Rekap (Bulan, Tahun, Sorting)
+    # Dibagi menjadi 2 baris agar rapi di mobile/web
+    row1_col1, row1_col2 = st.columns(2)
+    with row1_col1:
+        bulan = st.selectbox("Pilih Bulan", list(range(1, 13)), index=wita_now.month-1, key="sel_bulan")
+    with row1_col2:
+        tahun = st.selectbox("Pilih Tahun", [2024, 2025, 2026], index=2, key="sel_tahun")
+    
+    row2_col1, row2_col2 = st.columns(2)
+    with row2_col1:
+        # INI DROPDOWN SORTINGNYA
+        sort_by = st.selectbox("Urutkan Tabel Berdasarkan:", 
+                               ["Total Hadir", "Hadir Tepat", "Terlambat", "Nama Pegawai"], 
+                               key="sel_sort")
     
     all_data = pd.concat([df_pns, df_pppk])
     if not all_data.empty:
-        # Filter data bulan/tahun
         report_df = all_data[(all_data.iloc[:, 0].dt.month == bulan) & (all_data.iloc[:, 0].dt.year == tahun)].copy()
         report_df['Nama'] = report_df.iloc[:, 1].str.strip()
         report_df['Jam'] = report_df.iloc[:, 0].dt.hour
@@ -135,8 +146,6 @@ with tab3:
         for kategori, daftar in MASTER_DATA.items():
             for nama in daftar:
                 p_data = report_df[report_df['Nama'] == nama.strip()]
-                # Logika: Hadir tepat (sebelum jam 9), Terlambat (jam 9 ke atas)
-                # Dihitung per hari unik
                 h_tepat = p_data[p_data['Jam'] < 9].iloc[:, 0].dt.date.nunique()
                 h_telat = p_data[p_data['Jam'] >= 9].iloc[:, 0].dt.date.nunique()
                 rekap.append({
@@ -149,21 +158,23 @@ with tab3:
         
         final_rekap = pd.DataFrame(rekap)
         
-        # Fitur Urutkan
-        with c3: sort_by = st.selectbox("Urutkan:", ["Total Hadir", "Hadir Tepat", "Terlambat", "Nama Pegawai"])
+        # Eksekusi Sorting
         final_rekap = final_rekap.sort_values(by=sort_by, ascending=(False if sort_by != "Nama Pegawai" else True))
         
         # Tampilkan Tabel
         st.dataframe(final_rekap, use_container_width=True, hide_index=True)
         
-        # Tombol Download
-        csv = final_rekap.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 DOWNLOAD REKAP (CSV)",
-            data=csv,
-            file_name=f'rekap_absen_{bulan}_{tahun}.csv',
-            mime='text/csv',
-        )
+        # Tombol Download diletakkan di kolom sebelah kanan baris 2
+        with row2_col2:
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True) # Spacer
+            csv = final_rekap.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 DOWNLOAD CSV",
+                data=csv,
+                file_name=f'rekap_absen_{bulan}_{tahun}.csv',
+                mime='text/csv',
+                use_container_width=True
+            )
     else:
         st.warning("Data tidak ditemukan untuk periode ini.")
 
