@@ -8,13 +8,13 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS: ULTIMATE MOBILE LAYOUT ---
+# --- CSS: MOBILE & TABLE OPTIMIZED ---
 st.markdown("""
     <style>
     .centered { text-align: center; width: 100%; }
     .clock-style { font-size: 60px; color: #3498db; font-weight: bold; margin-bottom: 0px; }
     
-    /* Center & Big UI */
+    /* Tombol Cek Absen Gede & Tengah */
     div[data-testid="stDateInput"] { margin: 0 auto; width: 85% !important; }
     div.stButton > button:first-child {
         background-color: #d35400 !important;
@@ -28,14 +28,14 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* Row Zebra & Alignment */
-    .stHorizontalBlock {
-        align-items: center !important;
-        padding: 5px 0;
-        border-bottom: 1px solid #333;
+    /* Baris Zebra */
+    [data-testid="stVerticalBlock"] > div:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 5px;
     }
 
-    /* Tombol Absen Bulat */
+    /* Tombol P & S Bulat */
     .stButton button {
         border-radius: 50% !important;
         width: 48px !important;
@@ -43,11 +43,6 @@ st.markdown("""
         font-weight: bold !important;
         font-size: 16px !important;
         margin: 0 auto !important;
-    }
-    
-    @media (max-width: 600px) {
-        .stMarkdown div { font-size: 11px !important; }
-        .clock-style { font-size: 45px !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -70,7 +65,7 @@ is_pagi_time = wita_now.hour < 11
 st.markdown("<h3 class='centered'>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_allow_html=True)
 st.markdown(f"<div class='centered clock-style'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+tgl_pilihan = st.date_input("Pilih Tanggal", wita_now.date(), label_visibility="collapsed")
 if st.button("🔍 CEK ABSEN"): st.rerun()
 
 def fetch_data(url):
@@ -78,36 +73,36 @@ def fetch_data(url):
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        # Perbaikan Error Permanen: Paksa kolom 1 jadi Tanggal
-        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True, errors='coerce')
+        # FIX: Paksa kolom pertama jadi string lalu ubah ke datetime secara aman
+        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0].astype(str), dayfirst=True, errors='coerce')
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
 def kirim_absen(url, nama, sesi):
-    payload = {"entry.960346359": nama}
     try:
-        requests.post(url, data=payload, timeout=10)
+        requests.post(url, data={"entry.960346359": nama}, timeout=10)
         st.toast(f"✅ BERHASIL {sesi}: {nama.split(',')[0]}!")
-        time.sleep(1)
+        time.sleep(0.5)
         st.rerun()
-    except: st.error("Koneksi Error!")
+    except: st.error("Gagal kirim data.")
 
 def render_list(df, master, form_url, prefix):
-    t_limit = datetime.strptime("09:00", "%H:%M").time()
-    t_pulang = datetime.strptime("16:00", "%H:%M").time()
+    t_m, t_p = datetime.strptime("09:00", "%H:%M").time(), datetime.strptime("16:00", "%H:%M").time()
     log = {}
     
     if not df.empty:
-        # Filter Tanggal yang Aman
-        df_day = df[df.iloc[:, 0].dt.date == tgl_pilihan]
+        # FIX: Pastikan filter tanggal bekerja meskipun tipe data di Sheets aneh
+        tgl_target = tgl_pilihan.strftime('%Y-%m-%d')
+        df_day = df[df.iloc[:, 0].dt.strftime('%Y-%m-%d') == tgl_target]
+        
         for _, r in df_day.iterrows():
             nama, jam = str(r.iloc[1]).strip(), r.iloc[0].time()
             if nama not in log:
-                log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_limit else "TLT"}
-            elif jam >= t_pulang:
+                log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_m else "TLT"}
+            elif jam >= t_p:
                 log[nama]["p"] = jam.strftime("%H:%M")
 
-    # Header Sejajar
+    # Header
     st.write("---")
     h1, h2, h3, h4, h5, h6 = st.columns([0.5, 3.5, 1, 1, 1, 2.5])
     h1.write("**#**"); h2.write("**NAMA**"); h3.write("**PAGI**"); h4.write("**SORE**"); h5.write("**ST**"); h6.write("**AKSI**")
@@ -124,7 +119,6 @@ def render_list(df, master, form_url, prefix):
             c4.write(d["p"])
             c5.markdown(f":{clr}[**{d['k']}**]")
             
-            # Tombol Sejajar di Kanan (P dan S)
             with c6:
                 b1, b2 = st.columns(2)
                 with b1:
@@ -134,6 +128,6 @@ def render_list(df, master, form_url, prefix):
                     if st.button("S", key=f"s_{prefix}_{i}", disabled=is_pagi_time, type="primary" if not is_pagi_time else "secondary"):
                         kirim_absen(form_url, p, "SORE")
 
-tab1, tab2 = st.tabs(["👥 PNS", "👥 PPPK"])
+tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
 with tab1: render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
 with tab2: render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
