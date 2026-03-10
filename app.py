@@ -8,60 +8,72 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS MAGIC: FIX VERTICAL & ZEBRA ---
+# --- CSS TOTAL FIX: ZEBRA & MOBILE ALIGNMENT ---
 st.markdown("""
     <style>
-    .block-container { padding: 1rem !important; }
-    
-    /* Jam & Judul */
-    .centered-text { text-align: center; }
-    .big-clock {
+    /* Paksa container utama rata tengah */
+    .main-control {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         text-align: center;
-        color: #3498db;
-        font-weight: bold;
-        font-size: calc(30px + 3vw);
         margin-bottom: 20px;
     }
+    
+    /* Tombol Cek Absen di Tengah */
+    div.stButton > button:first-child {
+        background-color: #d35400 !important;
+        color: white !important;
+        width: 250px !important;
+        height: 50px !important;
+        font-weight: bold !important;
+        border-radius: 12px !important;
+        margin: 0 auto !important;
+        display: block !important;
+    }
 
-    /* Paksa kolom tetap sejajar kesamping di HP (Anti-Melorot) */
-    [data-testid="column"] {
-        min-width: 0px !important;
-        flex-basis: auto !important;
+    /* Memperbesar Tab Jenis Pegawai */
+    .stTabs [data-baseweb="tab-list"] {
+        justify-content: center !important;
+        gap: 20px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 18px !important;
+        font-weight: bold !important;
+    }
+
+    /* Tabel HTML Custom agar lurus di HP */
+    .absen-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: sans-serif;
+        font-size: 13px;
+    }
+    .absen-table th {
+        background-color: #333;
+        padding: 10px 5px;
+        text-align: left;
+        color: white;
+    }
+    .absen-table td {
+        padding: 8px 5px;
+        border-bottom: 1px solid #444;
+    }
+    /* Zebra Stripes */
+    .absen-table tr:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.05);
     }
     
-    div[data-testid="stHorizontalBlock"] {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-    }
-
-    /* Zebra Stripes */
-    .zebra-row {
-        background-color: rgba(255, 255, 255, 0.05);
+    /* Tombol Absen di Tabel */
+    .btn-absen {
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 5px 10px;
         border-radius: 5px;
-        padding: 5px 0px;
-    }
-
-    /* Tombol Cek Absen Utama */
-    div.stButton > button:first-child {
-        width: 250px !important;
-        margin: 0 auto;
-        display: block;
-        background-color: #d35400;
-        border-radius: 10px;
-    }
-
-    /* Tombol ABSEN di Tabel */
-    .small-absen-btn button {
-        padding: 2px 10px !important;
-        font-size: 12px !important;
-        height: 30px !important;
-        width: 100% !important;
-    }
-
-    @media (max-width: 600px) {
-        .stMarkdown div { font-size: 11px !important; }
-        .big-clock { font-size: 40px !important; }
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -77,27 +89,29 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-# --- HEADER ---
+# --- HEADER & JAM ---
 wita_now = datetime.now() + timedelta(hours=8)
-st.markdown("<h3 class='centered-text'>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_allow_html=True)
-st.markdown(f"<div class='big-clock'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; margin-bottom: 0;'>📊 MONITORING ABSENSI KPU HSS</h2>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='text-align: center; color: #3498db; font-size: 50px; margin-top: 0;'>{wita_now.strftime('%H:%M:%S')}</h1>", unsafe_allow_html=True)
 
-# --- KONTROL ---
-c_l, c_m, c_r = st.columns([1, 4, 1])
-with c_m:
-    tgl_pilihan = st.date_input("Tgl", wita_now.date(), label_visibility="collapsed")
-    if st.button("🔍 CEK ABSEN"): st.rerun()
+# --- KONTROL TENGAH ---
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+    if st.button("🔍 CEK ABSEN"):
+        st.rerun()
 
 def fetch_data(url):
     try:
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        for col in df.columns[:2]: df[col] = pd.to_datetime(df[col], dayfirst=True, errors='ignore')
+        for col in df.columns[:2]:
+            df[col] = pd.to_datetime(df[col], dayfirst=True, errors='ignore')
         return df
     except: return pd.DataFrame()
 
-def draw_rows(df, master, form_url):
+def display_absen(df, master, form_url):
     t_limit = datetime.strptime("09:00", "%H:%M").time()
     t_pulang = datetime.strptime("16:00", "%H:%M").time()
     log = {}
@@ -112,39 +126,41 @@ def draw_rows(df, master, form_url):
             nama, jam = str(r[name_col]).strip(), r[time_col].time()
             if nama not in log:
                 log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if jam <= t_limit else "TERLAMBAT"}
-            elif jam >= t_pulang: log[nama]["p"] = jam.strftime("%H:%M")
+            elif jam >= t_pulang:
+                log[nama]["p"] = jam.strftime("%H:%M")
 
-    st.divider()
-    # Header Tabel
-    h1, h2, h3, h4, h5, h6 = st.columns([0.5, 3.5, 1, 1, 1.5, 1.5])
-    h1.write("**#**"); h2.write("**NAMA**"); h3.write("**M**"); h4.write("**P**"); h5.write("**ST**"); h6.write("**AKSI**")
+    # BANGUN TABEL HTML (Agar Lurus & Ada Zebra)
+    html_table = "<table class='absen-table'><tr><th>#</th><th>NAMA PEGAWAI</th><th>M</th><th>P</th><th>ST</th></tr>"
     
     for i, p in enumerate(sorted(master), 1):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "❌"})
-        # Aplikasi Zebra Stripe pada baris genap
-        row_class = "zebra-row" if i % 2 == 0 else ""
-        st.markdown(f"<div class='{row_class}'>", unsafe_allow_html=True)
+        color = "#2ecc71" if "HADIR" in d["k"] else "#e67e22" if "TERLAMBAT" in d["k"] else "#e74c3c"
+        st_label = "HDR" if "HADIR" in d["k"] else "TLT" if "TERLAMBAT" in d["k"] else "ALPA"
         
-        r1, r2, r3, r4, r5, r6 = st.columns([0.5, 3.5, 1, 1, 1.5, 1.5])
-        r1.write(str(i))
-        r2.write(f"**{p}**")
-        r3.write(d["m"])
-        r4.write(d["p"])
-        
-        color = "green" if "HADIR" in d["k"] else "orange" if "TERLAMBAT" in d["k"] else "red"
-        st_text = "HDR" if "HADIR" in d["k"] else "TLT" if "TERLAMBAT" in d["k"] else "ALPA"
-        r5.markdown(f":{color}[**{st_text}**]")
-        
-        with r6:
-            st.markdown("<div class='small-absen-btn'>", unsafe_allow_html=True)
-            if st.button("ABSEN", key=f"v_{p}_{i}"):
+        html_table += f"""
+        <tr>
+            <td>{i}</td>
+            <td><b>{p}</b></td>
+            <td>{d['m']}</td>
+            <td>{d['p']}</td>
+            <td style='color: {color}; font-weight: bold;'>{st_label}</td>
+        </tr>
+        """
+    html_table += "</table>"
+    st.markdown(html_table, unsafe_allow_html=True)
+    
+    # Tombol Absen ditaruh di bawah tabel dalam kolom yang rapi
+    st.write("---")
+    st.write("**AKSI CEPAT (KLIK NAMA):**")
+    cols = st.columns(2) # Bagi 2 kolom tombol biar gak melar
+    for i, p in enumerate(sorted(master)):
+        with cols[i % 2]:
+            if st.button(f"ABSEN: {p.split(',')[0]}", key=f"btn_{p}_{i}"):
                 requests.post(form_url, data={"entry.960346359": p})
                 st.toast(f"✅ {p} Sukses!")
-                time.sleep(0.5); st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                time.sleep(0.5)
+                st.rerun()
 
-# --- TABS ---
 tab1, tab2 = st.tabs(["👥 PNS", "👥 PPPK"])
-with tab1: draw_rows(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
-with tab2: draw_rows(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
+with tab1: display_absen(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
+with tab2: display_absen(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
