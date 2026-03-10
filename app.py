@@ -1,258 +1,174 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
-from io import StringIO
+from datetime import datetime, timedelta
 import time
+import random
+from io import StringIO
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# ================= URL =================
-
-MASTER_URL = "ISI_LINK_MASTER_CSV"
-ABSEN_URL = "ISI_LINK_ABSEN_CSV"
-
-FORM_URL = "ISI_LINK_FORM_RESPONSE"
-ENTRY_ID = "entry.123456789"
-
-
-# ================= STYLE =================
-
+# --- CSS: ANTI-ANCRIT (HP & PC SAFE) ---
 st.markdown("""
-<style>
+    <style>
+    .centered { text-align: center; width: 100%; }
+    .clock-style { font-size: calc(30px + 3vw); color: #3498db; font-weight: bold; margin-bottom: 10px; }
+    
+    /* Input Tanggal & Tombol Cek */
+    div[data-testid="stDateInput"] { margin: 0 auto; width: 80% !important; }
+    div.stButton > button:first-child {
+        background-color: #d35400 !important;
+        color: white !important;
+        width: 80% !important;
+        height: 60px !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
+        margin: 10px auto !important;
+        display: block !important;
+        border-radius: 12px !important;
+    }
 
-.title{
-text-align:center;
-font-size:30px;
-font-weight:bold;
+    /* Tabel Monitoring: Kunci Layout agar tidak melorot di HP Vertikal */
+    .stHorizontalBlock {
+        align-items: center !important;
+        border-bottom: 1px solid #444;
+        padding: 10px 0;
+        display: flex !important;
+        flex-wrap: nowrap !important; /* Paksa satu baris */
+    }
+
+    /* Tombol P & S Kotak Mantap */
+    .stButton button[kind="primary"], .stButton button[kind="secondary"] {
+        border-radius: 8px !important;
+        width: 100% !important;
+        height: 45px !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+        padding: 0 !important;
+    }
+
+    /* Sembunyikan Iframe (Mesin Absen Belakang Layar) */
+    .hidden-iframe { display: none; }
+    
+    @media (max-width: 600px) {
+        .stMarkdown div { font-size: 10px !important; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- DATA MASTER (NIP & NAMA SESUAI FOTO) ---
+MASTER_DATA = {
+    "PNS": {
+        "Suwanto, SH., MH.": "19720521 200912 1 001",
+        "Wawan Setiawan, SH": "19860601 201012 1 004",
+        "Ineke Setiyaningsih, S.Sos": "19831003 200912 2 001",
+        "Farah Agustina Setiawati, SH": "19840828 201012 2 003",
+        "Rusma Ariati, SE": "19840621 201101 2 013",
+        "Helmalina": "19680318 199003 2 003",
+        "Ahmad Erwan Rifani, S.HI": "19830829 200811 1 001",
+        "Syaiful Anwar": "19741127 200710 1 001",
+        "Zainal Hilmi Yustan": "19821025 200701 1 003",
+        "Najmi Hidayati": "19850608 200701 2 003",
+        "Jainal Abidin": "19820712 200910 1 001",
+        "Suci Lestari, S.Ikom": "19850108 201012 2 006",
+        "Athaya Insyira Khairani, S.H": "20010712202506 2 017",
+        "Muhammad Ibnu Fahmi, S.H.": "20010608202506 1 007",
+        "Alfian Ridhani, S.Kom": "19950903202506 1 005",
+        "Muhammad Aldi Hudaifi, S.Kom": "20010121202506 1 007",
+        "Firda Aulia, S.Kom.": "20020415202506 2 007"
+    },
+    "PPPK": {
+        "Sya'bani Rona Baika": "199202072024212044",
+        "Apriadi Rakhman": "198904222024211013",
+        "M Satria Maipadly": "198905262024211016",
+        "Basuki Rahmat": "197705022024211007",
+        "Sulaiman": "198411222024211010",
+        "Saldoz Yedi": "198008112025211019",
+        "Mastoni Ridani": "199106012025211018",
+        "Suriadi": "199803022025211005",
+        "Ami Aspihani": "198204042025211031",
+        "Abdurrahman": "198810122025211031",
+        "Emaliani": "198906222025212027",
+        "Muhammad Hafiz Rijani, S.KOM": "199603212025211031",
+        "Saiful Fahmi, S.Pd": "199506172025211036",
+        "Nadianti": "199906062025212036"
+    }
 }
 
-.clock{
-text-align:center;
-font-size:42px;
-color:#3fa7ff;
-}
+URL_CSV_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
+URL_CSV_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
+FORM_URL_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
+FORM_URL_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-.card{
-background:#111;
-padding:15px;
-border-radius:10px;
-border:1px solid #333;
-text-align:center;
-}
+# --- LOGIKA WAKTU ---
+wita_now = datetime.now() + timedelta(hours=8)
+is_pagi_range = wita_now.hour < 16
 
-.hadir{color:#2ecc71;font-weight:bold;}
-.telat{color:#f1c40f;font-weight:bold;}
-.alpa{color:#e74c3c;font-weight:bold;}
+st.markdown("<h3 class='centered'>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_allow_html=True)
+st.markdown(f"<div class='centered clock-style'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-.stButton button{
-border-radius:50%;
-width:40px;
-height:40px;
-}
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+if st.button("🔍 CEK DATA TERBARU"): st.rerun()
 
-</style>
-""",unsafe_allow_html=True)
-
-
-# ================= HEADER =================
-
-now=datetime.now()
-
-st.markdown("<div class='title'>MONITORING ABSENSI KPU HSS</div>",unsafe_allow_html=True)
-
-st.markdown(f"<div class='clock'>{now.strftime('%H:%M:%S')}</div>",unsafe_allow_html=True)
-
-tanggal=st.date_input("Tanggal",now.date())
-
-
-# ================= LOAD MASTER =================
-
-def load_master():
-
-    r=requests.get(MASTER_URL)
-
-    df=pd.read_csv(StringIO(r.text))
-
-    df.columns=df.columns.str.strip()
-
-    return df
-
-
-# ================= LOAD ABSEN =================
-
-def load_absen():
-
-    r=requests.get(ABSEN_URL)
-
-    df=pd.read_csv(StringIO(r.text))
-
-    df.columns=df.columns.str.strip()
-
-    return df
-
-
-# ================= KIRIM ABSEN =================
-
-def kirim(nama):
-
-    payload={ENTRY_ID:nama}
-
+def fetch_data(url):
     try:
-
-        requests.post(FORM_URL,data=payload)
-
-        st.success("Absensi terkirim")
-
-        time.sleep(1)
-
-        st.rerun()
-
-    except:
-
-        st.error("Gagal mengirim")
-
-
-# ================= PROSES DATA =================
-
-def proses(master,absen):
-
-    log={}
-
-    batas=9
-
-    if absen.empty:
-        return log
-
-    waktu_col=absen.columns[0]
-    nama_col=absen.columns[1]
-
-    for _,r in absen.iterrows():
-
-        ts=pd.to_datetime(r[waktu_col],errors="coerce")
-
-        if pd.isna(ts):
-            continue
-
-        if ts.date()!=tanggal:
-            continue
-
-        nama=str(r[nama_col]).strip()
-
-        jam=ts.strftime("%H:%M")
-
-        status="HDR" if ts.hour< batas else "TLT"
-
-        log[nama]={
-        "jam":jam,
-        "status":status
-        }
-
-    return log
-
-
-master=load_master()
-
-absen=load_absen()
-
-log=proses(master,absen)
-
-
-# ================= STATISTIK =================
-
-total=len(master)
-
-hadir=sum(1 for n in master["Nama"] if n in log)
-
-telat=sum(1 for n in master["Nama"] if n in log and log[n]["status"]=="TLT")
-
-alpa=total-hadir
-
-c1,c2,c3,c4=st.columns(4)
-
-c1.markdown(f"<div class='card'><h2>{total}</h2>Total Pegawai</div>",unsafe_allow_html=True)
-
-c2.markdown(f"<div class='card'><h2>{hadir}</h2>Hadir</div>",unsafe_allow_html=True)
-
-c3.markdown(f"<div class='card'><h2>{telat}</h2>Telat</div>",unsafe_allow_html=True)
-
-c4.markdown(f"<div class='card'><h2>{alpa}</h2>Alpa</div>",unsafe_allow_html=True)
-
-st.divider()
-
-
-# ================= HEADER TABEL =================
-
-h1,h2,h3,h4,h5,h6=st.columns([1,4,3,4,2,2])
-
-h1.write("No")
-
-h2.write("Nama")
-
-h3.write("NIP")
-
-h4.write("Jabatan")
-
-h5.write("Status")
-
-h6.write("Aksi")
-
-
-# ================= TABEL =================
-
-for i,row in master.iterrows():
-
-    nama=row["Nama"]
-
-    nip=row["NIP"]
-
-    jab=row["Jabatan"]
-
-    data=log.get(nama,{"jam":"--","status":"ALPA"})
-
-    warna={
-    "HDR":"hadir",
-    "TLT":"telat",
-    "ALPA":"alpa"
-    }[data["status"]]
-
-    c1,c2,c3,c4,c5,c6=st.columns([1,4,3,4,2,2])
-
-    c1.write(i+1)
-
-    c2.write(nama)
-
-    c3.write(nip)
-
-    c4.write(jab)
-
-    c5.markdown(f"<span class='{warna}'>{data['status']}</span>",unsafe_allow_html=True)
-
-    with c6:
-
-        b1,b2=st.columns(2)
-
-        with b1:
-
-            if st.button("P",key=f"p{i}"):
-
-                kirim(nama)
-
-        with b2:
-
-            if st.button("S",key=f"s{i}"):
-
-                kirim(nama)
-
-
-# ================= DEBUG =================
-
-with st.expander("DEBUG DATA"):
-
-    st.write("MASTER PEGAWAI")
-
-    st.dataframe(master)
-
-    st.write("DATA ABSEN")
-
-    st.dataframe(absen)
+        res = requests.get(f"{url}&nc={random.random()}", timeout=10)
+        df = pd.read_csv(StringIO(res.text))
+        return df.dropna(subset=[df.columns[0]])
+    except: return pd.DataFrame()
+
+# MESIN ABSEN BELAKANG LAYAR (Iframe Magic)
+def absen_langsung(form_url, nama):
+    import urllib.parse
+    encoded_nama = urllib.parse.quote(nama)
+    # Trik: Kirim lewat link tapi targetnya iframe tersembunyi
+    full_url = f"{form_url}?entry.960346359={encoded_nama}&submit=Submit"
+    st.markdown(f'<iframe class="hidden-iframe" src="{full_url}"></iframe>', unsafe_allow_html=True)
+    st.toast(f"✅ Berhasil Mengirim Absen: {nama.split(',')[0]}")
+    time.sleep(1.5)
+    st.rerun()
+
+def render_list(df, master, form_url, prefix):
+    t_batas = datetime.strptime("09:00", "%H:%M").time()
+    t_pulang = datetime.strptime("16:00", "%H:%M").time()
+    log = {}
+    
+    if not df.empty:
+        t_str, t_str_alt = tgl_pilihan.strftime('%d/%m/%Y'), tgl_pilihan.strftime('%Y-%m-%d')
+        for _, r in df.iterrows():
+            ts = str(r.iloc[0])
+            if t_str in ts or t_str_alt in ts:
+                try:
+                    dt = pd.to_datetime(ts, dayfirst=True)
+                    nama, jam = str(r.iloc[1]).strip(), dt.time()
+                    if nama not in log:
+                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_batas else "TLT"}
+                    elif jam >= t_pulang: log[nama]["p"] = jam.strftime("%H:%M")
+                except: continue
+
+    st.write("---")
+    # Header Kolom
+    h1, h2, h3, h4, h5, h6, h7 = st.columns([0.5, 3.5, 1.1, 1.1, 0.8, 1, 1])
+    h1.write("**#**"); h2.write("**NAMA**"); h3.write("**PAGI**"); h4.write("**SORE**"); h5.write("**ST**"); h6.write("**P**"); h7.write("**S**")
+    
+    for i, (nama, nip) in enumerate(master.items(), 1):
+        d = log.get(nama.strip(), {"m": "--", "p": "--", "k": "ALPA"})
+        clr = "green" if d["k"]=="HDR" else "orange" if d["k"]=="TLT" else "red"
+        
+        c1, c2, c3, c4, c5, c6, c7 = st.columns([0.5, 3.5, 1.1, 1.1, 0.8, 1, 1])
+        c1.write(f"{i}")
+        c2.write(f"**{nama.split(',')[0]}**")
+        c3.write(d["m"])
+        c4.write(d["p"])
+        c5.markdown(f":{clr}[**{d['k']}**]")
+        
+        with c6:
+            if st.button("P", key=f"p_{prefix}_{i}", disabled=not is_pagi_range):
+                absen_langsung(form_url, nama)
+        with c7:
+            if st.button("S", key=f"s_{prefix}_{i}", disabled=is_pagi_range):
+                absen_langsung(form_url, nama)
+
+tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
+with tab1: render_list(fetch_data(URL_CSV_PNS), MASTER_DATA["PNS"], FORM_URL_PNS, "pns")
+with tab2: render_list(fetch_data(URL_CSV_PPPK), MASTER_DATA["PPPK"], FORM_URL_PPPK, "pppk")
