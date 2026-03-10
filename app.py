@@ -9,7 +9,7 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: SIMETRIS TENGAH & WARNA SOFT
+# 2. CSS: RUNNING TEXT, SOFT NAME BOX, & CENTER LAYOUT
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
@@ -17,16 +17,33 @@ st.markdown("""
     /* Center Jam */
     .header-jam { text-align: center; padding: 10px 0; }
     .clock-text { 
-        font-size: 80px; font-weight: 900; color: #ffffff; 
-        text-shadow: 0 0 30px rgba(249, 115, 22, 0.5); 
+        font-size: 85px; font-weight: 900; color: #ffffff; 
+        text-shadow: 0 0 30px rgba(249, 115, 22, 0.4); 
         font-family: 'Courier New', Courier, monospace;
+        margin-bottom: 5px;
+    }
+    
+    /* Running Text Style */
+    .running-text-container {
+        width: 100%; overflow: hidden; margin-bottom: 20px;
+    }
+    .running-text {
+        font-size: 18px; font-weight: 600; color: #f97316;
+        white-space: nowrap;
+        animation: scroll-left 25s linear infinite;
+        display: inline-block;
+        letter-spacing: 2px;
+    }
+    @keyframes scroll-left {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
     }
     
     /* Center Date Input */
     div[data-testid="stDateInput"] {
         width: 400px !important;
         margin: 0 auto !important;
-        background: #2d0a0a;
+        background: rgba(45, 10, 10, 0.8);
         border: 2px solid #f97316;
         border-radius: 15px;
         padding: 5px;
@@ -38,7 +55,7 @@ st.markdown("""
         font-size: 18px !important;
     }
 
-    /* Styling Button - Rata Tengah Paksa */
+    /* Styling Button Scan (Center) */
     .stButton { display: flex; justify-content: center; }
     .stButton > button { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
@@ -46,7 +63,7 @@ st.markdown("""
         width: 400px !important; 
         height: 60px !important; font-size: 20px !important; font-weight: 800 !important; 
         border-radius: 15px !important; border: none !important;
-        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4) !important;
+        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3) !important;
     }
 
     /* List Baris Pegawai */
@@ -57,22 +74,22 @@ st.markdown("""
         max-width: 1100px; margin-left: auto; margin-right: auto;
     }
     
-    /* Styling Nama: Soft & Elegan (Tidak Gonjreng) */
+    /* Styling Nama: Sangat Soft & Elegant */
     .col-nama { flex: 4; }
     .name-box {
-        background: rgba(249, 115, 22, 0.15); /* Orange tipis transparan */
-        padding: 10px 20px;
-        border: 1px solid rgba(249, 115, 22, 0.3);
+        background: rgba(249, 115, 22, 0.08); /* Tipis banget bang */
+        padding: 8px 18px;
+        border: 1px solid rgba(249, 115, 22, 0.15);
         border-radius: 10px;
         display: inline-block;
         min-width: 280px;
     }
     .name-box a { 
-        color: #fecaca !important; 
+        color: #fca5a5 !important; /* Warna merah muda pudar */
         text-decoration: none !important; 
-        font-size: 17px; font-weight: 700; 
+        font-size: 17px; font-weight: 600; 
     }
-    .name-box:hover { background: rgba(249, 115, 22, 0.25); border-color: #f97316; transition: 0.3s; }
+    .name-box:hover { background: rgba(249, 115, 22, 0.15); border-color: #f97316; transition: 0.3s; }
 
     .col-data-wrap { 
         flex: 6; display: flex; justify-content: space-around; 
@@ -86,7 +103,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MASTER DATA & LINK FORM
+# 3. MASTER DATA & SUMBER DATA
 MASTER_DATA = {
     "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hiyati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
@@ -98,14 +115,14 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 ENTRY_ID = "960346359"
 
-# 4. JAM REALTIME
-placeholder_jam = st.empty()
+# 4. JAM REALTIME & RUNNING TEXT
+placeholder_header = st.empty()
 wita_now = datetime.now() + timedelta(hours=8)
 
-# 5. TATA LETAK CENTER (MENGGUNAKAN KOLOM SEBAGAI SPACER)
-spacer_l, center_col, spacer_r = st.columns([1, 1.2, 1])
+# 5. TATA LETAK CENTER (3 KOLOM)
+col_l, col_m, col_r = st.columns([1, 1.2, 1])
 
-with center_col:
+with col_m:
     tgl_pilihan = st.date_input("Tanggal", wita_now.date())
     if st.button("🔍 SCAN DATA SEKARANG"):
         st.rerun()
@@ -170,13 +187,20 @@ with tab1:
 with tab2:
     render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
 
-# 8. LOGIKA JAM REALTIME & AUTO UPDATE HIDDEN
+# 8. LOGIKA JAM REALTIME & AUTO UPDATE HIDDEN (1 MENIT)
 while True:
     wita_tick = datetime.now() + timedelta(hours=8)
-    placeholder_jam.markdown(f'<div class="header-jam"><div class="clock-text">{wita_tick.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
+    placeholder_header.markdown(f"""
+        <div class="header-jam">
+            <div class="clock-text">{wita_tick.strftime("%H:%M:%S")}</div>
+            <div class="running-text-container">
+                <div class="running-text">ABSENSI KPU Kabupaten Hulu Sungai Selatan &nbsp; • &nbsp; ABSENSI KPU Kabupaten Hulu Sungai Selatan &nbsp; • &nbsp; ABSENSI KPU Kabupaten Hulu Sungai Selatan</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
     
-    # Auto Update tetap jalan tiap 30 detik tanpa tombol
-    if wita_tick.second % 30 == 0:
+    # Auto Update otomatis setiap menit ke-0 (1 menit sekali)
+    if wita_tick.second == 0:
         st.rerun()
         
     time.sleep(1)
