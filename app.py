@@ -2,9 +2,8 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
-import time
-import random
 from io import StringIO
+import random
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
@@ -12,27 +11,68 @@ st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 st.markdown("""
 <style>
 
-.centered {
-    text-align:center;
+.title{
+text-align:center;
+font-size:28px;
+font-weight:bold;
 }
 
-.clock-style {
-    font-size:60px;
-    color:#3498db;
-    font-weight:bold;
+.clock{
+text-align:center;
+font-size:48px;
+color:#3498db;
+margin-bottom:20px;
 }
 
-.row {
-    border-bottom:1px solid #444;
-    padding:8px 0;
+table{
+width:100%;
+border-collapse:collapse;
 }
 
-.stButton button {
-    width:50px;
-    height:50px;
-    border-radius:50%;
-    font-weight:bold;
-    font-size:18px;
+th{
+text-align:left;
+padding:10px;
+border-bottom:2px solid #444;
+}
+
+td{
+padding:10px;
+border-bottom:1px solid #333;
+}
+
+.status-hadir{
+color:#2ecc71;
+font-weight:bold;
+}
+
+.status-telat{
+color:#f39c12;
+font-weight:bold;
+}
+
+.status-alpa{
+color:#e74c3c;
+font-weight:bold;
+}
+
+button[kind="primary"]{
+border-radius:50%;
+width:45px;
+height:45px;
+font-weight:bold;
+}
+
+@media (max-width:768px){
+
+th:nth-child(1),
+td:nth-child(1){
+display:none;
+}
+
+.clock{
+font-size:36px;
+}
+
 }
 
 </style>
@@ -41,23 +81,11 @@ st.markdown("""
 # ================= MASTER DATA =================
 MASTER_DATA = {
 "PNS":[
-"Suwanto, SH., MH.",
-"Wawan Setiawan, SH",
-"Ineke Setiyaningsih, S.Sos",
-"Farah Agustina Setiawati, SH",
-"Rusma Ariati, SE",
-"Helmalina",
-"Ahmad Erwan Rifani, S.HI",
-"Syaiful Anwar",
-"Zainal Hilmi Yustan",
-"Najmi Hidayati",
-"Jainal Abidin",
-"Suci Lestari, S.Ikom",
-"Athaya Insyira Khairani, S.H",
-"Muhammad Ibnu Fahmi, S.H.",
-"Alfian Ridhani, S.Kom",
-"Muhammad Aldi Hudaifi, S.Kom",
-"Firda Aulia, S.Kom."
+"Suwanto",
+"Wawan Setiawan",
+"Ineke Setiyaningsih",
+"Farah Agustina Setiawati",
+"Rusma Ariati"
 ],
 
 "PPPK":[
@@ -70,41 +98,40 @@ MASTER_DATA = {
 "Mastoni Ridani",
 "Suriadi",
 "Ami Aspihani",
-"Abdurrahman",
-"Emaliani",
-"Muhammad Hafiz Rijani, S.KOM",
-"Saiful Fahmi, S.Pd",
-"Nadianti"
+"Abdurrahman"
 ]
 }
 
 # ================= URL =================
-URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
-URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
+URL_PNS = "URL_CSV_PNS"
+URL_PPPK = "URL_CSV_PPPK"
 
-FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
-FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
+FORM_PNS = "URL_FORM_PNS"
+FORM_PPPK = "URL_FORM_PPPK"
+
+ENTRY_ID = "entry.960346359"
 
 # ================= TIME =================
 wita_now = datetime.now() + timedelta(hours=8)
-is_pagi = wita_now.hour < 11
 
 # ================= HEADER =================
-st.markdown("<h2 class='centered'>📊 MONITORING ABSENSI KPU HSS</h2>", unsafe_allow_html=True)
-st.markdown(f"<div class='centered clock-style'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+st.markdown("<div class='title'>MONITORING ABSENSI KPU HSS</div>", unsafe_allow_html=True)
 
-tgl_pilihan = st.date_input("Tanggal", wita_now.date())
+st.markdown(
+f"<div class='clock'>{wita_now.strftime('%H:%M:%S')}</div>",
+unsafe_allow_html=True
+)
+
+tanggal = st.date_input("Tanggal", wita_now.date())
 
 # ================= FETCH DATA =================
 def fetch_data(url):
 
     try:
 
-        res = requests.get(f"{url}&cache={random.random()}", timeout=10)
+        r = requests.get(f"{url}&cache={random.random()}", timeout=10)
 
-        df = pd.read_csv(StringIO(res.text))
-
-        df.columns = df.columns.str.strip()
+        df = pd.read_csv(StringIO(r.text))
 
         return df
 
@@ -112,27 +139,25 @@ def fetch_data(url):
 
         return pd.DataFrame()
 
-# ================= KIRIM ABSENSI =================
-def kirim_data(url, nama, tipe):
+# ================= KIRIM DATA =================
+def kirim_absen(url,nama):
+
+    payload = {
+        ENTRY_ID: nama
+    }
 
     headers = {
         "User-Agent":"Mozilla/5.0",
         "Content-Type":"application/x-www-form-urlencoded"
     }
 
-    payload = {
-        "entry.960346359": nama
-    }
-
     try:
 
-        res = requests.post(url, data=payload, headers=headers)
+        r = requests.post(url,data=payload,headers=headers)
 
-        if res.status_code == 200:
+        if r.status_code == 200:
 
-            st.success(f"Absen {tipe} berhasil : {nama}")
-
-            time.sleep(1)
+            st.success("Absensi berhasil")
 
             st.rerun()
 
@@ -144,13 +169,13 @@ def kirim_data(url, nama, tipe):
 
         st.error(e)
 
-# ================= RENDER LIST =================
-def render_list(df, master, form_url, prefix):
+# ================= PROSES LOG =================
+def proses_log(df):
+
+    log = {}
 
     batas_masuk = datetime.strptime("09:00","%H:%M").time()
     batas_pulang = datetime.strptime("16:00","%H:%M").time()
-
-    log = {}
 
     if not df.empty:
 
@@ -158,11 +183,11 @@ def render_list(df, master, form_url, prefix):
 
             try:
 
-                ts = pd.to_datetime(r.iloc[0], dayfirst=True)
+                ts = pd.to_datetime(r.iloc[0],dayfirst=True)
 
                 nama = str(r.iloc[1]).strip()
 
-                if ts.date() == tgl_pilihan:
+                if ts.date() == tanggal:
 
                     jam = ts.time()
 
@@ -183,56 +208,63 @@ def render_list(df, master, form_url, prefix):
             except:
                 pass
 
-    # HEADER TABLE
-    st.write("---")
+    return log
 
-    h1,h2,h3,h4,h5,h6 = st.columns([1,4,2,2,1,2])
+# ================= RENDER TABLE =================
+def render(master,log,form_url,prefix):
 
-    h1.write("No")
-    h2.write("Nama")
-    h3.write("Pagi")
-    h4.write("Sore")
-    h5.write("St")
-    h6.write("Aksi")
+    header_html = """
+<table>
+<tr>
+<th>No</th>
+<th>Nama</th>
+<th>Pagi</th>
+<th>Sore</th>
+<th>Status</th>
+<th>Aksi</th>
+</tr>
+"""
 
-    # ROW
-    for i,p in enumerate(sorted(master),1):
+    st.markdown(header_html,unsafe_allow_html=True)
 
-        data = log.get(p,{
+    for i,nama in enumerate(master,1):
+
+        data = log.get(nama,{
         "m":"--",
         "p":"--",
         "k":"ALPA"
         })
 
-        warna = "green" if data["k"]=="HDR" else "orange" if data["k"]=="TLT" else "red"
+        status_class = {
+        "HDR":"status-hadir",
+        "TLT":"status-telat",
+        "ALPA":"status-alpa"
+        }[data["k"]]
 
-        c1,c2,c3,c4,c5,c6 = st.columns([1,4,2,2,1,2])
+        row_html = f"""
+<tr>
+<td>{i}</td>
+<td>{nama}</td>
+<td>{data['m']}</td>
+<td>{data['p']}</td>
+<td class="{status_class}">{data['k']}</td>
+<td></td>
+</tr>
+"""
 
-        c1.write(i)
+        st.markdown(row_html,unsafe_allow_html=True)
 
-        c2.write(p.split(",")[0])
+        c1,c2 = st.columns(2)
 
-        c3.write(data["m"])
+        with c1:
+            if st.button("P",key=f"p_{prefix}_{i}"):
+                kirim_absen(form_url,nama)
 
-        c4.write(data["p"])
+        with c2:
+            if st.button("S",key=f"s_{prefix}_{i}"):
+                kirim_absen(form_url,nama)
 
-        c5.markdown(f":{warna}[**{data['k']}**]")
-
-        with c6:
-
-            b1,b2 = st.columns(2)
-
-            with b1:
-
-                if st.button("P", key=f"p_{prefix}_{i}", disabled=not is_pagi):
-
-                    kirim_data(form_url, p, "PAGI")
-
-            with b2:
-
-                if st.button("S", key=f"s_{prefix}_{i}", disabled=is_pagi):
-
-                    kirim_data(form_url, p, "SORE")
+    st.markdown("</table>",unsafe_allow_html=True)
 
 # ================= TAB =================
 tab1,tab2 = st.tabs(["PNS","PPPK"])
@@ -241,10 +273,14 @@ with tab1:
 
     df = fetch_data(URL_PNS)
 
-    render_list(df, MASTER_DATA["PNS"], FORM_PNS, "pns")
+    log = proses_log(df)
+
+    render(MASTER_DATA["PNS"],log,FORM_PNS,"pns")
 
 with tab2:
 
     df = fetch_data(URL_PPPK)
 
-    render_list(df, MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
+    log = proses_log(df)
+
+    render(MASTER_DATA["PPPK"],log,FORM_PPPK,"pppk")
