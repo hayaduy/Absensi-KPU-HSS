@@ -9,83 +9,79 @@ from io import StringIO
 # Konfigurasi Halaman
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: REPLIKA TOTAL (SIDE-BY-SIDE FIX) ---
+# --- CSS: CLONE PERSIS GAMBAR (MAROON & ORANGE) ---
 st.markdown("""
     <style>
-    /* Background & Global */
     .stApp { background-color: #2d0a0a; color: #ffffff; }
     
-    /* Header Jam */
-    .header-center { text-align: center; padding: 20px 0; }
-    .clock-text { font-size: 65px; font-weight: bold; color: #ffffff; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
+    /* Header Jam Besar */
+    .header-jam { text-align: center; padding: 20px 0; margin-bottom: 10px; }
+    .clock-text { font-size: 70px; font-weight: bold; color: #ffffff; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
     
-    /* Center Controls (Tanggal & Cari Data) */
+    /* Cari Data Tengah & Gede */
     div[data-testid="stDateInput"] { width: 300px !important; margin: 0 auto !important; }
     div[data-testid="stDateInput"] label { display: none; }
     
     .stButton { display: flex; justify-content: center; }
-    
-    /* Tombol CARI DATA (Pasti Tengah & Gede) */
     div.stButton > button:first-child { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; width: 400px !important; height: 65px !important; 
+        color: white !important; width: 450px !important; height: 65px !important; 
         font-size: 22px !important; font-weight: 800 !important; border-radius: 20px !important;
-        margin: 15px auto !important; border: 1px solid #fb923c !important;
+        margin: 20px auto !important; border: 1px solid #fb923c !important;
         box-shadow: 0 0 20px rgba(234, 88, 12, 0.5) !important;
     }
 
-    /* TABS (Tiru Gambar) */
+    /* TABS */
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 5px; border: none !important; }
     .stTabs [data-baseweb="tab"] { 
-        background-color: #4c0519 !important; border-radius: 10px 10px 0 0 !important; 
-        padding: 12px 35px !important; font-size: 15px !important; font-weight: 700 !important;
+        background-color: #4c0519 !important; border-radius: 12px 12px 0 0 !important; 
+        padding: 12px 40px !important; font-size: 15px !important; font-weight: 700 !important;
         color: #fca5a5 !important; border: none !important;
     }
     .stTabs [aria-selected="true"] { background-color: #f97316 !important; color: #ffffff !important; }
 
-    /* --- LAYOUT SATU BARIS (FIXED SIDE-BY-SIDE) --- */
-    .presence-row {
+    /* --- CONTAINER BARIS (FIXED SIDE-BY-SIDE) --- */
+    .row-container {
         display: flex;
         flex-direction: row;
         align-items: center;
-        justify-content: space-between;
         background: linear-gradient(90deg, #4c0519 0%, #7f1d1d 100%);
-        padding: 5px 20px;
-        border-radius: 12px;
-        margin-bottom: 8px;
+        padding: 10px 25px;
+        border-radius: 15px;
+        margin-bottom: 10px;
         border: 1px solid #991b1b;
-        min-height: 70px;
+        min-height: 75px;
+        width: 100%;
     }
 
-    .name-col { flex: 3; font-size: 17px; font-weight: 700; color: #fecaca; text-align: left; }
+    .col-nama { flex: 3; font-size: 18px; font-weight: 700; color: #fecaca; text-align: left; }
     
-    .data-group { 
+    .col-data-wrap { 
         flex: 5; display: flex; justify-content: space-around; 
-        text-align: center; border-left: 1px solid #991b1b; padding: 0 20px;
+        text-align: center; border-left: 1px solid #991b1b; padding: 0 30px;
     }
-    .data-item { flex: 1; }
-    .label-xs { font-size: 9px; color: #fca5a5; text-transform: uppercase; margin-bottom: 1px; }
-    .val-md { font-size: 15px; font-weight: 800; color: #ffffff; }
+    .item-box { flex: 1; }
+    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; margin-bottom: 2px; }
+    .val-v { font-size: 16px; font-weight: 800; color: #ffffff; }
 
-    /* TOMBOL ABSEN SAMPING (SEBELAH KANAN KET) */
-    .btn-col { flex: 2; display: flex; justify-content: flex-end; align-items: center; }
+    /* TOMBOL ABSEN DI UJUNG KANAN (SYMMETRIC) */
+    .col-btn-action { flex: 2; display: flex; justify-content: flex-end; }
     
-    /* Styling Tombol Absen Streamlit di dalam kolom khusus */
+    /* Override Button Streamlit agar tetap di samping */
     div[data-testid="column"]:nth-child(2) button {
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; height: 50px !important; width: 100% !important;
+        color: white !important; height: 55px !important; width: 100% !important;
         border-radius: 15px !important; font-weight: 800 !important; font-size: 16px !important;
         border: 1px solid #fb923c !important; margin: 0 !important;
-        box-shadow: 0 4px 10px rgba(249, 115, 22, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4) !important;
     }
 
-    /* Mobile Fix */
-    @media (max-width: 800px) {
-        .presence-row { flex-direction: column; padding: 20px; text-align: center; }
-        .name-col { margin-bottom: 10px; width: 100%; }
-        .data-group { border-left: none; border-top: 1px solid #991b1b; padding: 15px 0; width: 100%; }
-        .btn-col { width: 100%; margin-top: 10px; }
-        div.stButton > button:first-child { width: 90% !important; }
+    @media (max-width: 900px) {
+        .row-container { flex-direction: column; padding: 20px; text-align: center; }
+        .col-nama { margin-bottom: 15px; border-bottom: 1px solid #991b1b; padding-bottom: 10px; width: 100%; }
+        .col-data-wrap { border-left: none; width: 100%; margin-bottom: 15px; }
+        .col-btn-action { width: 100%; }
+        div.stButton > button:first-child { width: 95% !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -102,12 +98,12 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# --- HEADER JAM ---
+# --- JAM ATAS ---
 wita_now = datetime.now() + timedelta(hours=8)
-st.markdown(f'<div class="header-center"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="header-jam"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-# --- CONTROLS ---
-tgl_pilihan = st.date_input("Tanggal", wita_now.date())
+# --- CARI DATA CENTER ---
+tgl_pilihan = st.date_input("Tgl", wita_now.date())
 if st.button("🔍 CARI DATA"):
     st.rerun()
 
@@ -122,7 +118,7 @@ def direct_submit(form_url, nama):
     enc_nama = urllib.parse.quote(nama)
     final_url = f"{form_url}?entry.{E_ID}={enc_nama}&submit=Submit"
     st.markdown(f"""<meta http-equiv="refresh" content="0;URL='{final_url}'">""", unsafe_allow_html=True)
-    st.info(f"🚀 Memproses Absen {nama.split(',')[0]}...")
+    st.info(f"🔄 Memproses Absen {nama.split(',')[0]}...")
     time.sleep(2)
 
 def render_list(df, master, form_url, prefix):
@@ -139,7 +135,7 @@ def render_list(df, master, form_url, prefix):
                     nama, jam = str(r.iloc[1]).strip(), dt.time()
                     if nama not in log:
                         log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if jam <= t_limit else "TERLAMBAT"}
-                    elif jam >= t_out: log[nama]["p"] = jam.strftime("%H:%M")
+                    elif jam >= t_pulang: log[nama]["p"] = jam.strftime("%H:%M")
                 except: continue
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -147,19 +143,19 @@ def render_list(df, master, form_url, prefix):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "ALPA"})
         clr_status = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
         
-        # --- HTML FLEXBOX (INI KUNCINYA) ---
+        # --- HTML FLEXBOX BARIS SATU GARIS ---
         st.markdown(f"""
-        <div class="presence-row">
-            <div class="name-col">{i}. {p.split(',')[0]}</div>
-            <div class="data-group">
-                <div class="data-item"><div class="label-xs">Pagi</div><div class="val-md">{d['m']}</div></div>
-                <div class="data-item"><div class="label-xs">Sore</div><div class="val-md">{d['p']}</div></div>
-                <div class="data-item"><div class="label-xs">Ket</div><div style="color:{clr_status}; font-weight:800; font-size:15px;">{d['k']}</div></div>
+        <div class="row-container">
+            <div class="col-nama">{i}. {p.split(',')[0]}</div>
+            <div class="col-data-wrap">
+                <div class="item-box"><div class="label-k">Pagi</div><div class="val-v">{d['m']}</div></div>
+                <div class="item-box"><div class="label-k">Sore</div><div class="val-v">{d['p']}</div></div>
+                <div class="item-box"><div class="label-k">Ket</div><div style="color:{clr_status}; font-weight:900; font-size:16px;">{d['k']}</div></div>
             </div>
-            <div class="btn-col">
+            <div class="col-btn-action">
         """, unsafe_allow_html=True)
         
-        # Tombol Absen berada di sebelah kanan Ket
+        # Tombol Absen di ujung kanan (Satu Baris)
         if st.button("ABSEN", key=f"btn_{prefix}_{i}"):
             direct_submit(form_url, p)
             
