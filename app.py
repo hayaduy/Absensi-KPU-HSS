@@ -9,44 +9,25 @@ from io import StringIO
 # 1. Konfigurasi Halaman
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS FINAL: SEMUA CENTER & RAPI
+# 2. CSS FINAL
 st.markdown("""
     <style>
     .stApp { background-color: #2d0a0a; color: #ffffff; }
-    
-    /* Header Jam Center */
     .header-jam { text-align: center; padding: 20px 0; }
     .clock-text { font-size: 70px; font-weight: bold; color: #ffffff; text-shadow: 0 0 20px rgba(255,255,255,0.6); }
     
-    /* Wrapper Input Tanggal agar Center */
-    div[data-testid="stDateInput"] { 
-        width: 300px !important; 
-        margin: 0 auto !important; 
-    }
+    div[data-testid="stDateInput"] { width: 300px !important; margin: 0 auto !important; }
     div[data-testid="stDateInput"] label { display: none; }
 
-    /* --- TOMBOL CARI DATA (CENTERED) --- */
-    div.stButton {
-        display: flex;
-        justify-content: center; 
-        width: 100%;
-    }
-    
+    div.stButton { display: flex; justify-content: center; width: 100%; }
     div.stButton > button:first-child { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; 
-        width: 100% !important; 
-        max-width: 450px !important; 
-        height: 60px !important; 
-        font-size: 20px !important; 
-        font-weight: 800 !important; 
-        border-radius: 15px !important;
-        border: 1px solid #fb923c !important;
-        box-shadow: 0 0 15px rgba(234, 88, 12, 0.4) !important;
-        margin-top: 15px;
+        color: white !important; width: 100% !important; max-width: 450px !important; 
+        height: 60px !important; font-size: 20px !important; font-weight: 800 !important; 
+        border-radius: 15px !important; border: 1px solid #fb923c !important;
+        box-shadow: 0 0 15px rgba(234, 88, 12, 0.4) !important; margin-top: 15px;
     }
 
-    /* Tabs Center */
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 5px; border: none !important; }
     .stTabs [data-baseweb="tab"] { 
         background-color: #4c0519 !important; border-radius: 12px 12px 0 0 !important; 
@@ -54,7 +35,6 @@ st.markdown("""
     }
     .stTabs [aria-selected="true"] { background-color: #f97316 !important; color: #ffffff !important; }
 
-    /* Baris Pegawai */
     .row-container {
         display: flex; align-items: center;
         background: linear-gradient(90deg, #4c0519 0%, #7f1d1d 100%);
@@ -64,18 +44,18 @@ st.markdown("""
 
     .col-nama { flex: 4; font-size: 18px; font-weight: 700; }
     .col-nama a { color: #fecaca; text-decoration: none; display: block; width: 100%; }
-    .col-nama a:hover { color: #ffffff; }
-    
-    .col-data-wrap { 
-        flex: 5; display: flex; justify-content: space-around; 
-        text-align: center; border-left: 1px solid #991b1b; padding: 0 30px;
-    }
+    .col-data-wrap { flex: 5; display: flex; justify-content: space-around; text-align: center; border-left: 1px solid #991b1b; padding: 0 30px; }
     .val-v { font-size: 16px; font-weight: 800; color: #ffffff; }
     .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
+    
+    /* Style Table Rekap */
+    .rekap-table { width: 100%; color: white; border-collapse: collapse; margin-top: 20px; }
+    .rekap-table th { background-color: #f97316; padding: 10px; }
+    .rekap-table td { padding: 10px; border-bottom: 1px solid #4c0519; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MASTER DATA & CONFIG
+# 3. MASTER DATA
 MASTER_DATA = {
     "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
@@ -87,20 +67,17 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# 4. JAM & KONTROL ATAS (Paksa WITA karena Server GitHub UTC)
+# 4. JAM & KONTROL
 wita_now = datetime.now() + timedelta(hours=8)
 st.markdown(f'<div class="header-jam"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
-if st.button("🔍 CARI DATA"):
-    st.rerun()
-
-# 5. FUNGSI LOGIKA DATA
+# 5. FUNGSI LOGIKA
 def fetch_data(url):
     try:
-        # Menambahkan parameter random agar data tidak tersangkut di cache server GitHub
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
-        return pd.read_csv(StringIO(res.text))
+        df = pd.read_csv(StringIO(res.text))
+        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True)
+        return df
     except: return pd.DataFrame()
 
 def render_list(df, master, form_url):
@@ -108,71 +85,76 @@ def render_list(df, master, form_url):
     wita_current = datetime.now() + timedelta(hours=8)
     log = {}
     
-    # Baca data dari Spreadsheet
     if not df.empty:
-        for _, r in df.iterrows():
-            ts = str(r.iloc[0])
-            if today_str in ts:
-                try:
-                    dt = pd.to_datetime(ts, dayfirst=True)
-                    nama, jam = str(r.iloc[1]).strip(), dt.time()
-                    if nama not in log:
-                        # Penentuan status awal bagi yang sudah absen
-                        status_awal = "HADIR" if jam.hour < 9 else "TERLAMBAT"
-                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": status_awal}
-                    elif jam.hour >= 16: 
-                        log[nama]["p"] = jam.strftime("%H:%M")
-                except: continue
+        # Filter data hari ini saja
+        mask = df.iloc[:, 0].dt.strftime('%d/%m/%Y') == today_str
+        df_today = df[mask]
+        for _, r in df_today.iterrows():
+            nama, dt = str(r.iloc[1]).strip(), r.iloc[0]
+            jam = dt.time()
+            if nama not in log:
+                status = "HADIR" if jam.hour < 9 else "TERLAMBAT"
+                log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": status}
+            elif jam.hour >= 16: log[nama]["p"] = jam.strftime("%H:%M")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    
     for i, p in enumerate(sorted(master), 1):
         nama_p = p.strip()
-        
-        if nama_p in log:
-            d = log[nama_p]
+        if nama_p in log: d = log[nama_p]
         else:
-            # LOGIKA SESUAI PERMINTAAN USER
-            if tgl_pilihan < wita_current.date():
-                ket_status = "ALPA"
-            elif wita_current.hour >= 16:
-                ket_status = "LAPOR KASUBBAG"
-            elif wita_current.hour >= 9:
-                ket_status = "TERLAMBAT"
-            else:
-                ket_status = "BELUM ABSEN"
-                
-            d = {"m": "--:--", "p": "--:--", "k": ket_status}
+            if tgl_pilihan < wita_current.date(): ket = "ALPA"
+            elif wita_current.hour >= 16: ket = "LAPOR KASUBBAG"
+            elif wita_current.hour >= 9: ket = "TERLAMBAT"
+            else: ket = "BELUM ABSEN"
+            d = {"m": "--:--", "p": "--:--", "k": ket}
 
-        # Penentuan Warna
-        if d["k"] == "HADIR": clr = "#4ade80"       # Hijau
-        elif d["k"] == "BELUM ABSEN": clr = "#60a5fa" # Biru (Informatif)
-        elif d["k"] == "TERLAMBAT": clr = "#fb923c"   # Oranye
-        else: clr = "#f87171"                         # Merah (Lapor Kasubbag / Alpa)
-
+        clr = "#4ade80" if d["k"]=="HADIR" else "#60a5fa" if d["k"]=="BELUM ABSEN" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
         link = f"{form_url}?entry.{E_ID}={p.replace(' ', '+')}&submit=Submit"
-        
-        st.markdown(f"""
-        <div class="row-container">
-            <div class="col-nama"><a href="{link}" target="_self">{i}. {p.split(',')[0]}</a></div>
-            <div class="col-data-wrap">
-                <div class="item-box"><div class="label-k">Pagi</div><div class="val-v">{d['m']}</div></div>
-                <div class="item-box"><div class="label-k">Sore</div><div class="val-v">{d['p']}</div></div>
-                <div class="item-box"><div class="label-k">Ket</div><div style="color:{clr}; font-weight:900;">{d['k']}</div></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="row-container"><div class="col-nama"><a href="{link}" target="_self">{i}. {p.split(",")[0]}</a></div><div class="col-data-wrap"><div class="item-box"><div class="label-k">Pagi</div><div class="val-v">{d["m"]}</div></div><div class="item-box"><div class="label-k">Sore</div><div class="val-v">{d["p"]}</div></div><div class="item-box"><div class="label-k">Ket</div><div style="color:{clr}; font-weight:900;">{d["k"]}</div></div></div></div>', unsafe_allow_html=True)
 
 # 6. TABS LAYOUT
-tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+tab1, tab2, tab3 = st.tabs(["👥 PNS", "👥 PPPK", "📊 REKAP BULANAN"])
+
 with tab1:
-    data_pns = fetch_data(URL_PNS)
-    render_list(data_pns, MASTER_DATA["PNS"], FORM_PNS)
+    df_pns = fetch_data(URL_PNS)
+    render_list(df_pns, MASTER_DATA["PNS"], FORM_PNS)
 
 with tab2:
-    data_pppk = fetch_data(URL_PPPK)
-    render_list(data_pppk, MASTER_DATA["PPPK"], FORM_PPPK)
+    df_pppk = fetch_data(URL_PPPK)
+    render_list(df_pppk, MASTER_DATA["PPPK"], FORM_PPPK)
 
-# Refresh otomatis setiap 30 detik agar jam dan data terupdate
+with tab3:
+    st.subheader("Rekap Kehadiran Bulanan")
+    c1, c2 = st.columns(2)
+    with c1: bulan = st.selectbox("Pilih Bulan", list(range(1, 13)), index=wita_now.month-1)
+    with c2: tahun = st.selectbox("Pilih Tahun", [2024, 2025, 2026], index=2)
+    
+    all_data = pd.concat([df_pns, df_pppk])
+    if not all_data.empty:
+        # Filter data sesuai bulan & tahun
+        report_df = all_data[(all_data.iloc[:, 0].dt.month == bulan) & (all_data.iloc[:, 0].dt.year == tahun)].copy()
+        report_df['Nama'] = report_df.iloc[:, 1].str.strip()
+        report_df['Jam'] = report_df.iloc[:, 0].dt.hour
+        
+        rekap = []
+        for kategori, daftar in MASTER_DATA.items():
+            for nama in daftar:
+                p_data = report_df[report_df['Nama'] == nama.strip()]
+                # Menghitung hari unik (asumsi 1 hari 1 kehadiran sah)
+                hadir_total = p_data[report_df['Jam'] < 9].iloc[:, 0].dt.date.nunique()
+                telat_total = p_data[report_df['Jam'] >= 9].iloc[:, 0].dt.date.nunique()
+                rekap.append({"Nama": nama, "Hadir (Tepat)": hadir_total, "Terlambat": telat_total, "Total": hadir_total + telat_total})
+        
+        df_rekap = pd.DataFrame(rekap)
+        
+        # Fitur Sorting
+        sort_by = st.selectbox("Urutkan Berdasarkan:", ["Total", "Hadir (Tepat)", "Terlambat", "Nama"])
+        df_rekap = df_rekap.sort_values(by=sort_by, ascending=(False if sort_by != "Nama" else True))
+        
+        st.table(df_rekap)
+
+if st.button("🔍 REFRESH DATA"):
+    st.rerun()
+
 time.sleep(30)
 st.rerun()
