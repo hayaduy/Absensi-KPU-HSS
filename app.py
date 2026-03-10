@@ -47,11 +47,6 @@ st.markdown("""
     .col-data-wrap { flex: 5; display: flex; justify-content: space-around; text-align: center; border-left: 1px solid #991b1b; padding: 0 30px; }
     .val-v { font-size: 16px; font-weight: 800; color: #ffffff; }
     .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
-    
-    /* Style Table Rekap */
-    .rekap-table { width: 100%; color: white; border-collapse: collapse; margin-top: 20px; }
-    .rekap-table th { background-color: #f97316; padding: 10px; }
-    .rekap-table td { padding: 10px; border-bottom: 1px solid #4c0519; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -80,13 +75,12 @@ def fetch_data(url):
         return df
     except: return pd.DataFrame()
 
-def render_list(df, master, form_url):
+def render_list(df, master, form_url, tgl_pilihan):
     today_str = tgl_pilihan.strftime('%d/%m/%Y')
     wita_current = datetime.now() + timedelta(hours=8)
     log = {}
     
     if not df.empty:
-        # Filter data hari ini saja
         mask = df.iloc[:, 0].dt.strftime('%d/%m/%Y') == today_str
         df_today = df[mask]
         for _, r in df_today.iterrows():
@@ -115,23 +109,24 @@ def render_list(df, master, form_url):
 tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
 tab1, tab2, tab3 = st.tabs(["👥 PNS", "👥 PPPK", "📊 REKAP BULANAN"])
 
+df_pns = fetch_data(URL_PNS)
+df_pppk = fetch_data(URL_PPPK)
+
 with tab1:
-    df_pns = fetch_data(URL_PNS)
-    render_list(df_pns, MASTER_DATA["PNS"], FORM_PNS)
+    render_list(df_pns, MASTER_DATA["PNS"], FORM_PNS, tgl_pilihan)
 
 with tab2:
-    df_pppk = fetch_data(URL_PPPK)
-    render_list(df_pppk, MASTER_DATA["PPPK"], FORM_PPPK)
+    render_list(df_pppk, MASTER_DATA["PPPK"], FORM_PPPK, tgl_pilihan)
 
 with tab3:
-    st.subheader("Rekap Kehadiran Bulanan")
-    c1, c2 = st.columns(2)
-    with c1: bulan = st.selectbox("Pilih Bulan", list(range(1, 13)), index=wita_now.month-1)
-    with c2: tahun = st.selectbox("Pilih Tahun", [2024, 2025, 2026], index=2)
+    st.markdown("### 📊 Rekapitulasi Kehadiran Pegawai")
+    c1, c2, c3 = st.columns([2, 2, 2])
+    with c1: bulan = st.selectbox("Bulan", list(range(1, 13)), index=wita_now.month-1)
+    with c2: tahun = st.selectbox("Tahun", [2024, 2025, 2026], index=2)
     
     all_data = pd.concat([df_pns, df_pppk])
     if not all_data.empty:
-        # Filter data sesuai bulan & tahun
+        # Filter data bulan/tahun
         report_df = all_data[(all_data.iloc[:, 0].dt.month == bulan) & (all_data.iloc[:, 0].dt.year == tahun)].copy()
         report_df['Nama'] = report_df.iloc[:, 1].str.strip()
         report_df['Jam'] = report_df.iloc[:, 0].dt.hour
@@ -140,20 +135,39 @@ with tab3:
         for kategori, daftar in MASTER_DATA.items():
             for nama in daftar:
                 p_data = report_df[report_df['Nama'] == nama.strip()]
-                # Menghitung hari unik (asumsi 1 hari 1 kehadiran sah)
-                hadir_total = p_data[report_df['Jam'] < 9].iloc[:, 0].dt.date.nunique()
-                telat_total = p_data[report_df['Jam'] >= 9].iloc[:, 0].dt.date.nunique()
-                rekap.append({"Nama": nama, "Hadir (Tepat)": hadir_total, "Terlambat": telat_total, "Total": hadir_total + telat_total})
+                # Logika: Hadir tepat (sebelum jam 9), Terlambat (jam 9 ke atas)
+                # Dihitung per hari unik
+                h_tepat = p_data[p_data['Jam'] < 9].iloc[:, 0].dt.date.nunique()
+                h_telat = p_data[p_data['Jam'] >= 9].iloc[:, 0].dt.date.nunique()
+                rekap.append({
+                    "Nama Pegawai": nama,
+                    "Kategori": kategori,
+                    "Hadir Tepat": h_tepat,
+                    "Terlambat": h_telat,
+                    "Total Hadir": h_tepat + h_telat
+                })
         
-        df_rekap = pd.DataFrame(rekap)
+        final_rekap = pd.DataFrame(rekap)
         
-        # Fitur Sorting
-        sort_by = st.selectbox("Urutkan Berdasarkan:", ["Total", "Hadir (Tepat)", "Terlambat", "Nama"])
-        df_rekap = df_rekap.sort_values(by=sort_by, ascending=(False if sort_by != "Nama" else True))
+        # Fitur Urutkan
+        with c3: sort_by = st.selectbox("Urutkan:", ["Total Hadir", "Hadir Tepat", "Terlambat", "Nama Pegawai"])
+        final_rekap = final_rekap.sort_values(by=sort_by, ascending=(False if sort_by != "Nama Pegawai" else True))
         
-        st.table(df_rekap)
+        # Tampilkan Tabel
+        st.dataframe(final_rekap, use_container_width=True, hide_index=True)
+        
+        # Tombol Download
+        csv = final_rekap.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 DOWNLOAD REKAP (CSV)",
+            data=csv,
+            file_name=f'rekap_absen_{bulan}_{tahun}.csv',
+            mime='text/csv',
+        )
+    else:
+        st.warning("Data tidak ditemukan untuk periode ini.")
 
-if st.button("🔍 REFRESH DATA"):
+if st.button("🔍 REFRESH SISTEM"):
     st.rerun()
 
 time.sleep(30)
