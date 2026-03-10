@@ -73,7 +73,7 @@ def fetch_data(url):
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        # FIX: Paksa kolom pertama jadi string lalu ubah ke datetime secara aman
+        # FIX: Ubah kolom 1 ke string, lalu ke datetime secara sangat hati-hati
         df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0].astype(str), dayfirst=True, errors='coerce')
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
@@ -91,9 +91,11 @@ def render_list(df, master, form_url, prefix):
     log = {}
     
     if not df.empty:
-        # FIX: Pastikan filter tanggal bekerja meskipun tipe data di Sheets aneh
-        tgl_target = tgl_pilihan.strftime('%Y-%m-%d')
-        df_day = df[df.iloc[:, 0].dt.strftime('%Y-%m-%d') == tgl_target]
+        # FIX: Filter tanggal menggunakan perbandingan string YYYY-MM-DD yang jauh lebih stabil
+        tgl_target_str = tgl_pilihan.strftime('%Y-%m-%d')
+        # Pastikan kolom 0 adalah datetime sebelum menggunakan .dt
+        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0])
+        df_day = df[df.iloc[:, 0].dt.strftime('%Y-%m-%d') == tgl_target_str]
         
         for _, r in df_day.iterrows():
             nama, jam = str(r.iloc[1]).strip(), r.iloc[0].time()
