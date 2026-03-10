@@ -4,10 +4,11 @@ import requests
 from datetime import datetime
 import time
 import random
+from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- DATA MASTER (Otak v3.2) ---
+# --- DATA MASTER ---
 MASTER_DATA = {
     "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
@@ -18,11 +19,9 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-# --- JAM DIGITAL ---
 st.markdown(f"<h1 style='text-align: center;'>📊 MONITORING ABSENSI KPU HSS</h1>", unsafe_allow_html=True)
 st.markdown(f"<h3 style='text-align: center; color: #3498db;'>🕒 {datetime.now().strftime('%H:%M:%S')}</h3>", unsafe_allow_html=True)
 
-# --- CONTROLS ---
 col_tgl, col_btn = st.columns([2, 1])
 with col_tgl:
     tgl_pilihan = st.date_input("📅 Pilih Tanggal Scan/Absen", datetime.now())
@@ -30,25 +29,24 @@ with col_btn:
     if st.button("🔍 SCAN DATA SEKARANG", use_container_width=True):
         st.rerun()
 
-# --- FUNGSI ---
 def fetch_data(url):
     try:
         res = requests.get(f"{url}&nocache={random.random()}", timeout=10)
-        df = pd.read_csv(requests.compat.StringIO(res.text))
+        df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
+        # Perbaikan Error: Paksa kolom pertama jadi datetime
         df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True, errors='coerce')
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
 def proses_absen(nama, url):
-    # Gunakan ID Tanggal jika ingin Backdate, di sini pakai standar Nama dulu
-    payload = {"entry.960346359": nama, "entry.111111111": tgl_pilihan.strftime('%d/%m/%Y')}
+    # Kirim data ke Google Form
+    payload = {"entry.960346359": nama} 
     requests.post(url, data=payload)
     st.toast(f"✅ Absensi {nama} Terkirim!")
     time.sleep(1)
     st.rerun()
 
-# --- TABEL ---
 tab_pns, tab_pppk = st.tabs(["PEGAWAI PNS", "PEGAWAI PPPK"])
 
 def draw_ui(df, master, form_url):
@@ -57,10 +55,13 @@ def draw_ui(df, master, form_url):
     log = {}
     
     if not df.empty:
-        tgl_str = tgl_pilihan.strftime('%d/%m/%Y')
-        col_tgl = [c for c in df.columns if 'Tanggal' in c]
-        df_day = df[df[col_tgl[0]] == tgl_str] if col_tgl else df[df.iloc[:, 0].dt.date == tgl_pilihan]
-        df_day = df_day.sort_values(by=df.columns[0])
+        # Pastikan kolom waktu valid
+        df_valid = df.copy()
+        df_valid.iloc[:, 0] = pd.to_datetime(df_valid.iloc[:, 0])
+        
+        # Filter berdasarkan tanggal pilihan
+        df_day = df_valid[df_valid.iloc[:, 0].dt.date == tgl_pilihan]
+        df_day = df_day.sort_values(by=df_day.columns[0])
         
         for _, r in df_day.iterrows():
             nama = str(r.iloc[1]).strip()
@@ -70,7 +71,7 @@ def draw_ui(df, master, form_url):
             elif jam >= t_pulang:
                 log[nama]["p"] = jam.strftime("%H:%M")
 
-    # Header
+    # Header Tabel
     c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 1, 1, 1.5, 1])
     c1.write("**NO**"); c2.write("**NAMA PEGAWAI**"); c3.write("**MASUK**"); c4.write("**PULANG**"); c5.write("**STATUS**"); c6.write("**AKSI**")
     st.divider()
