@@ -9,7 +9,7 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: SEMUA RATA TENGAH & DESAIN MODERN
+# 2. CSS: SIMETRIS TENGAH & NAMA BERWARNA
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
@@ -22,9 +22,9 @@ st.markdown("""
         font-family: 'Courier New', Courier, monospace;
     }
     
-    /* Center Date Input & Custom Style */
+    /* Center Date Input - Lebar Dasar 400px */
     div[data-testid="stDateInput"] {
-        width: 350px !important;
+        width: 400px !important;
         margin: 10px auto !important;
         background: #2d0a0a;
         border: 2px solid #f97316;
@@ -35,35 +35,44 @@ st.markdown("""
     div[data-testid="stDateInput"] input { 
         color: #ffffff !important; text-align: center !important;
         background-color: transparent !important; border: none !important;
+        font-size: 18px !important;
     }
 
-    /* Center Button */
-    .stButton { display: flex; justify-content: center; }
+    /* Styling Button - Samakan Panjang dengan Tanggal */
     .stButton > button { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; width: 400px !important; 
-        height: 60px !important; font-size: 22px !important; font-weight: 800 !important; 
-        border-radius: 20px !important; border: none !important;
+        color: white !important; 
+        width: 400px !important; /* DISAMAKAN DENGAN TANGGAL */
+        height: 60px !important; font-size: 20px !important; font-weight: 800 !important; 
+        border-radius: 15px !important; border: none !important;
         box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4) !important;
-    }
-
-    /* Center Checkbox/Toggle */
-    div[data-testid="stCheckbox"] {
-        display: flex; justify-content: center; margin-top: 15px; width: 100%;
+        display: block; margin: 0 auto;
     }
 
     /* List Baris Pegawai */
     .row-container {
         display: flex; align-items: center;
         background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
-        padding: 18px 25px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #7f1d1d;
+        padding: 15px 25px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #7f1d1d;
         max-width: 1100px; margin-left: auto; margin-right: auto;
     }
     
-    /* Styling Nama sebagai Link */
-    .col-nama { flex: 4; font-size: 19px; font-weight: 700; }
-    .col-nama a { color: #fecaca; text-decoration: none; }
-    .col-nama a:hover { color: #ffffff; text-decoration: underline; }
+    /* Styling Nama dengan Background Oranye */
+    .col-nama { flex: 4; }
+    .name-box {
+        background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
+        padding: 10px 20px;
+        border-radius: 10px;
+        display: inline-block;
+        min-width: 250px;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    }
+    .name-box a { 
+        color: #ffffff !important; 
+        text-decoration: none !important; 
+        font-size: 17px; font-weight: 800; 
+    }
+    .name-box:hover { opacity: 0.9; transform: scale(1.02); transition: 0.2s; }
 
     .col-data-wrap { 
         flex: 6; display: flex; justify-content: space-around; 
@@ -85,22 +94,24 @@ MASTER_DATA = {
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
-# Link Form Pre-filled (Abang ganti sesuai kebutuhan)
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
-ENTRY_ID = "960346359" # ID field nama di Google Form
+ENTRY_ID = "960346359"
 
 # 4. JAM REALTIME
 placeholder_jam = st.empty()
 wita_now = datetime.now() + timedelta(hours=8)
 
-# 5. TATA LETAK CENTER (UI KONTROL)
-tgl_pilihan = st.date_input("Tanggal", wita_now.date())
+# 5. TATA LETAK CENTER (3 KOLOM)
+col_l, col_m, col_r = st.columns([1, 1.2, 1])
 
-if st.button("🔍 SCAN DATA SEKARANG"):
-    st.rerun()
-
-auto_refresh = st.checkbox("Auto Update (30 detik)", value=True)
+with col_m:
+    tgl_pilihan = st.date_input("Tanggal", wita_now.date())
+    
+    if st.button("🔍 SCAN DATA SEKARANG"):
+        st.rerun()
+    
+    auto_refresh = st.checkbox("Auto Update (30 detik)", value=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -132,21 +143,20 @@ def render_list(df, master, form_url):
         nama_p = p.strip()
         d = log.get(nama_p, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
         
-        # Logika Keterangan
         if d["k"] == "BELUM ABSEN":
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
             elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
             elif wita_now.hour >= 9: d["k"] = "TERLAMBAT"
             
         clr = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
-        
-        # Backlink ke Google Form
         link_absensi = f"{form_url}?entry.{ENTRY_ID}={nama_p.replace(' ', '+')}&submit=Submit"
         
         st.markdown(f"""
         <div class="row-container">
             <div class="col-nama">
-                <a href="{link_absensi}" target="_blank">{i}. {nama_p.split(',')[0]}</a>
+                <div class="name-box">
+                    <a href="{link_absensi}" target="_blank">{i}. {nama_p.split(',')[0]}</a>
+                </div>
             </div>
             <div class="col-data-wrap">
                 <div class="item-box"><div class="label-k">Pagi</div><div class="val-v">{d['m']}</div></div>
@@ -163,12 +173,11 @@ with tab1:
 with tab2:
     render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
 
-# 8. LOGIKA JAM REALTIME & REFRESH
+# 8. LOGIKA JAM REALTIME
 while True:
     wita_tick = datetime.now() + timedelta(hours=8)
     placeholder_jam.markdown(f'<div class="header-jam"><div class="clock-text">{wita_tick.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
     
-    # Logika Auto Refresh tiap 30 detik
     if auto_refresh and wita_tick.second % 30 == 0:
         st.rerun()
         
