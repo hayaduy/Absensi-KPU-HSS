@@ -8,41 +8,65 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# CSS untuk memposisikan elemen ke tengah tanpa merusak tabel
+# --- CSS MAGIC: RESPONSIVE DESIGN ---
 st.markdown("""
     <style>
-    /* Meratakan judul dan jam ke tengah */
-    .centered-text { text-align: center; }
+    /* Reset padding biar full di HP */
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* Membuat container input tanggal dan tombol cek absen di tengah */
-    .center-container {
+    /* Judul yang ukurannya menyesuaikan layar */
+    .responsive-title {
+        text-align: center;
+        font-size: calc(18px + 1.5vw);
+        font-weight: bold;
+        margin-bottom: 0px;
+    }
+
+    /* Jam Digital yang ukurannya adaptif */
+    .responsive-clock {
+        text-align: center;
+        color: #3498db;
+        font-weight: bold;
+        font-size: calc(35px + 3vw);
+        margin-top: -10px;
+        margin-bottom: 20px;
+    }
+
+    /* Membungkus Kontrol (Tanggal & Tombol) agar rapi di semua layar */
+    .control-box {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 15px;
-        margin-bottom: 30px;
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Tombol yang proporsional */
+    div.stButton > button {
+        width: 100% !important;
+        height: 55px !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        border-radius: 12px !important;
+    }
+
+    /* Meratakan Tabs ke tengah */
+    .stTabs [data-baseweb="tab-list"] { justify-content: center; }
+    .stTabs [data-baseweb="tab"] { font-size: calc(14px + 0.5vw) !important; }
+
+    /* Pengaturan Tabel Monitoring */
+    .monitor-row {
+        padding: 10px;
+        border-bottom: 1px solid #444;
+        display: flex;
+        align-items: center;
     }
     
-    /* Memperbesar Tab Jenis Pegawai di Tengah */
-    .stTabs [data-baseweb="tab-list"] {
-        justify-content: center;
-        gap: 30px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        font-size: 20px !important;
-        font-weight: bold;
-    }
-    
-    /* Tombol Cek Absen yang Proporsional */
-    div.stButton > button:first-child {
-        background-color: #d35400;
-        color: white;
-        font-size: 20px;
-        font-weight: bold;
-        padding: 10px 40px;
-        border-radius: 10px;
-        border: none;
+    /* Sembunyikan elemen tertentu kalau di HP biar gak sumpek */
+    @media (max-width: 600px) {
+        .stMarkdown div { font-size: 13px !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -58,19 +82,18 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-# --- HEADER & JAM (Tanpa Tulisan) ---
+# --- HEADER & JAM ---
 wita_now = datetime.now() + timedelta(hours=8)
-st.markdown("<h1 class='centered-text'>📊 MONITORING ABSENSI KPU HSS</h1>", unsafe_allow_html=True)
-st.markdown(f"<h1 style='text-align: center; color: #3498db; font-size: 70px; margin-top: -20px;'>{wita_now.strftime('%H:%M:%S')}</h1>", unsafe_allow_html=True)
+st.markdown("<div class='responsive-title'>📊 MONITORING ABSENSI KPU HSS</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='responsive-clock'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# --- MENU TENGAH (Pilih Tanggal & Cek Absen) ---
-st.markdown("<div class='center-container'>", unsafe_allow_html=True)
-col_a, col_b, col_c = st.columns([1, 1, 1])
-with col_b: # Kolom Tengah
-    tgl_pilihan = st.date_input("Pilih Tanggal Scan/Absen", wita_now.date(), label_visibility="collapsed")
-    if st.button("🔍 CEK ABSEN", use_container_width=True):
+# --- KONTROL UTAMA ---
+# Menggunakan columns dengan perbandingan yang aman untuk HP (1:4:1)
+c_gap1, c_main, c_gap2 = st.columns([1, 6, 1])
+with c_main:
+    tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
+    if st.button("🔍 CEK ABSEN"):
         st.rerun()
-st.markdown("</div>", unsafe_allow_html=True)
 
 def fetch_data(url):
     try:
@@ -82,47 +105,45 @@ def fetch_data(url):
         return df
     except: return pd.DataFrame()
 
-def draw_ui(df, master, form_url):
+def draw_table(df, master, form_url):
     t_limit = datetime.strptime("09:00", "%H:%M").time()
     t_pulang = datetime.strptime("16:00", "%H:%M").time()
     log = {}
     
     if not df.empty:
         df_clean = df.copy()
-        time_col = df_clean.columns[0]
-        name_col = df_clean.columns[1]
+        time_col, name_col = df_clean.columns[0], df_clean.columns[1]
         df_clean[time_col] = pd.to_datetime(df_clean[time_col], errors='coerce')
         df_clean = df_clean.dropna(subset=[time_col])
         df_day = df_clean[df_clean[time_col].dt.date == tgl_pilihan]
         
         for _, r in df_day.iterrows():
-            nama = str(r[name_col]).strip()
-            jam = r[time_col].time()
+            nama, jam = str(r[name_col]).strip(), r[time_col].time()
             if nama not in log:
                 log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if jam <= t_limit else "TERLAMBAT"}
             elif jam >= t_pulang:
                 log[nama]["p"] = jam.strftime("%H:%M")
 
-    # Layout Tabel (KEMBALI KE ASLI)
-    st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 1, 1, 1.5, 1])
-    c1.write("**NO**"); c2.write("**NAMA PEGAWAI**"); c3.write("**MASUK**"); c4.write("**PULANG**"); c5.write("**STATUS**"); c6.write("**AKSI**")
     st.divider()
-
+    # Penyesuaian lebar kolom: Nama dapat porsi paling besar
+    c1, c2, c3, c4, c5, c6 = st.columns([0.6, 4, 1.2, 1.2, 2, 1.2])
+    c1.write("**#**"); c2.write("**NAMA**"); c3.write("**M**"); c4.write("**P**"); c5.write("**STAT**"); c6.write("**AKSI**")
+    
     for i, p in enumerate(sorted(master), 1):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "❌ ALPA"})
-        r1, r2, r3, r4, r5, r6 = st.columns([0.5, 3, 1, 1, 1.5, 1])
+        r1, r2, r3, r4, r5, r6 = st.columns([0.6, 4, 1.2, 1.2, 2, 1.2])
         r1.write(str(i))
         r2.write(f"**{p}**")
         r3.write(d["m"])
         r4.write(d["p"])
         color = "green" if "HADIR" in d["k"] else "orange" if "TERLAMBAT" in d["k"] else "red"
         r5.markdown(f":{color}[{d['k']}]")
-        if r6.button("ABSEN", key=f"btn_{p}_{i}"):
+        if r6.button("✔", key=f"btn_{p}_{i}"):
             requests.post(form_url, data={"entry.960346359": p})
-            st.toast(f"✅ Absen {p} Sukses!"); time.sleep(1); st.rerun()
+            st.toast(f"✅ {p} Sukses!")
+            time.sleep(0.5); st.rerun()
 
 # --- TABS ---
-tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1: draw_ui(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
-with tab2: draw_ui(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
+tab1, tab2 = st.tabs(["👥 PNS", "👥 PPPK"])
+with tab1: draw_table(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
+with tab2: draw_table(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
