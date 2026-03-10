@@ -9,7 +9,7 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: RUNNING TEXT DENGAN HIGHLIGHT & UI CENTER
+# 2. CSS: RUNNING TEXT, SOFT NAME BOX, & CENTER LAYOUT
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
@@ -36,7 +36,7 @@ st.markdown("""
         letter-spacing: 1px;
     }
     .highlight {
-        color: #facc15; /* Kuning Terang */
+        color: #facc15; 
         font-weight: 800;
         text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
     }
@@ -110,7 +110,7 @@ st.markdown("""
 
 # 3. MASTER DATA
 MASTER_DATA = {
-    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hiyati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
+    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
 }
 
@@ -140,13 +140,12 @@ def fetch_data(url):
         return pd.read_csv(StringIO(res.text))
     except: return pd.DataFrame()
 
-def render_list(df, master, form_url):
+def process_log(df, tgl_pilihan):
     today = tgl_pilihan.strftime('%d/%m/%Y')
     log = {}
     if not df.empty:
         df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True, errors='coerce')
         df = df.dropna(subset=[df.columns[0]]).sort_values(by=df.columns[0])
-        
         for _, r in df.iterrows():
             ts = r.iloc[0]
             if ts.strftime('%d/%m/%Y') == today:
@@ -156,17 +155,37 @@ def render_list(df, master, form_url):
                     log[nama] = {"m": jam_str, "p": "--:--", "k": "HADIR" if ts.hour < 9 else "TERLAMBAT"}
                 if ts.hour >= 15:
                     log[nama]["p"] = jam_str
+    return log
 
-    for i, p in enumerate(sorted(master), 1):
+def render_list(log, master, form_url, sort_priority=False):
+    list_to_show = []
+    for p in master:
         nama_p = p.strip()
         d = log.get(nama_p, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
+        
+        # Logika Status
         if d["k"] == "BELUM ABSEN":
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
             elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
             elif wita_now.hour >= 9: d["k"] = "TERLAMBAT"
             
+        # Tentukan Urutan (Priority 0 untuk yang belum absen)
+        priority = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
+        list_to_show.append({"nama": nama_p, "data": d, "priority": priority})
+
+    # Sorting jika di tab 'Semua'
+    if sort_priority:
+        list_to_show = sorted(list_to_show, key=lambda x: (x['priority'], x['nama']))
+    else:
+        list_to_show = sorted(list_to_show, key=lambda x: x['nama'])
+
+    for i, item in enumerate(list_to_show, 1):
+        nama_p = item["nama"]
+        d = item["data"]
         clr = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
-        link_absensi = f"{form_url}?entry.{ENTRY_ID}={nama_p.replace(' ', '+')}&submit=Submit"
+        # Gunakan link form berdasarkan list asalnya (PNS/PPPK)
+        target_form = FORM_PNS if nama_p in MASTER_DATA["PNS"] else FORM_PPPK
+        link_absensi = f"{target_form}?entry.{ENTRY_ID}={nama_p.replace(' ', '+')}&submit=Submit"
         
         st.markdown(f"""
         <div class="row-container">
@@ -183,10 +202,24 @@ def render_list(df, master, form_url):
         </div>
         """, unsafe_allow_html=True)
 
-# 7. TABS
-tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1: render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
-with tab2: render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
+# LOAD SEMUA DATA
+log_pns = process_log(fetch_data(URL_PNS), tgl_pilihan)
+log_pppk = process_log(fetch_data(URL_PPPK), tgl_pilihan)
+combined_log = {**log_pns, **log_pppk}
+all_names = MASTER_DATA["PNS"] + MASTER_DATA["PPPK"]
+
+# 7. TABS (Sekarang ada 3 Tab)
+tab_all, tab_pns, tab_pppk = st.tabs(["🌎 SEMUA PEGAWAI", "👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
+
+with tab_all:
+    # sort_priority=True agar yang belum absen di atas
+    render_list(combined_log, all_names, None, sort_priority=True)
+
+with tab_pns:
+    render_list(log_pns, MASTER_DATA["PNS"], FORM_PNS)
+
+with tab_pppk:
+    render_list(log_pppk, MASTER_DATA["PPPK"], FORM_PPPK)
 
 # 8. LOGIKA JAM & REFRESH 60 DETIK
 while True:
