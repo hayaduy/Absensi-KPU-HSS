@@ -9,81 +9,78 @@ from io import StringIO
 # Konfigurasi Halaman
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: REPLIKA PERSIS IMAGE_94E40C ---
+# --- CSS: REPLIKA PERSIS TOTAL (IMAGE_94E40C) ---
 st.markdown("""
     <style>
-    /* Background Maroon Gelap */
-    .stApp { background-color: #2d0a0a; color: #ffffff; }
+    /* Background & Global Font */
+    .stApp { background-color: #2d0a0a; color: #ffffff; font-family: 'Segoe UI', sans-serif; }
     
-    /* Header Section */
-    .header-container { text-align: center; padding: 20px 0; margin-bottom: 20px; }
-    .clock-text { font-size: 60px; font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
+    /* Header Jam */
+    .clock-container { text-align: center; padding: 20px 0; }
+    .clock-text { font-size: 60px; font-weight: bold; color: #ffffff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
     
-    /* Control Center (Tanggal & Cari Data) */
-    .stDateInput { width: 300px !important; margin: 0 auto !important; }
+    /* Center Controls */
+    div[data-testid="stDateInput"] { width: 300px !important; margin: 0 auto !important; }
     div[data-testid="stDateInput"] label { display: none; }
-    div[data-testid="stDateInput"] > div { border-radius: 10px !important; background: #1e1e1e !important; color: white !important; }
     
-    /* Tombol CARI DATA (Pasti Tengah & Gede) */
+    /* Tombol CARI DATA Gede & Tengah */
     .stButton { display: flex; justify-content: center; }
     div.stButton > button:first-child { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; width: 450px !important; height: 70px !important; 
-        font-size: 22px !important; font-weight: 800 !important; border-radius: 25px !important;
-        margin: 20px auto !important; border: 1px solid #fb923c !important;
-        box-shadow: 0 0 20px rgba(234, 88, 12, 0.6) !important;
+        color: white !important; width: 400px !important; height: 60px !important; 
+        font-size: 20px !important; font-weight: 800 !important; border-radius: 20px !important;
+        margin: 10px auto !important; border: 1px solid #fb923c !important;
+        box-shadow: 0 0 15px rgba(234, 88, 12, 0.5) !important;
     }
 
-    /* TABS (Gaya Gambar) */
+    /* TABS Gaya Gambar */
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 5px; border: none !important; }
     .stTabs [data-baseweb="tab"] { 
-        background-color: #4c0519 !important; border-radius: 12px 12px 0 0 !important; 
-        padding: 12px 35px !important; font-size: 15px !important; font-weight: 700 !important;
+        background-color: #4c0519 !important; border-radius: 10px 10px 0 0 !important; 
+        padding: 10px 30px !important; font-size: 14px !important; font-weight: 700 !important;
         color: #fca5a5 !important; border: none !important;
     }
     .stTabs [aria-selected="true"] { background-color: #f97316 !important; color: #ffffff !important; }
 
-    /* LAYOUT BARIS (Satu Garis Lurus) */
-    .row-absensi {
+    /* --- LAYOUT SATU BARIS (IDENTIK GAMBAR) --- */
+    .row-wrapper {
         display: flex;
         flex-direction: row;
         align-items: center;
         background: linear-gradient(90deg, #4c0519 0%, #7f1d1d 100%);
-        padding: 5px 20px;
-        border-radius: 15px;
-        margin-bottom: 10px;
+        padding: 5px 15px;
+        border-radius: 12px;
+        margin-bottom: 8px;
         border: 1px solid #991b1b;
-        justify-content: space-between;
-        min-height: 70px;
+        width: 100%;
+        min-height: 60px;
     }
 
-    .col-nama { flex: 3; font-size: 16px; font-weight: 700; color: #fecaca; text-align: left; }
+    .col-nama { flex: 3; font-size: 16px; font-weight: 700; color: #fecaca; }
     
-    .col-stats { 
+    .col-data { 
         flex: 5; display: flex; justify-content: space-around; 
-        text-align: center; border-left: 1px solid #991b1b; padding: 0 20px;
+        text-align: center; border-left: 1px solid #991b1b; padding: 0 15px;
     }
-    .stat-item { flex: 1; }
-    .label-kecil { font-size: 9px; color: #fca5a5; text-transform: uppercase; margin-bottom: 2px; }
-    .val-besar { font-size: 15px; font-weight: 800; color: #ffffff; }
-    .status-text { font-size: 15px; font-weight: 800; }
+    .data-box { flex: 1; }
+    .label-k { font-size: 8px; color: #fca5a5; text-transform: uppercase; margin-bottom: 1px; }
+    .val-k { font-size: 14px; font-weight: 800; color: #ffffff; }
 
-    /* TOMBOL ABSEN SAMPING (Simetris) */
-    .col-btn { flex: 2; display: flex; justify-content: flex-end; height: 100%; }
+    /* TOMBOL ABSEN DI DALAM KANAN */
+    .col-btn-wrap { flex: 1.5; display: flex; justify-content: flex-end; }
     div[data-testid="column"]:nth-child(2) button {
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; height: 55px !important; width: 100% !important;
-        border-radius: 15px !important; font-weight: 800 !important; font-size: 16px !important;
+        color: white !important; height: 40px !important; width: 100% !important;
+        border-radius: 10px !important; font-weight: 800 !important; font-size: 14px !important;
         border: 1px solid #fb923c !important; margin: 0 !important;
-        box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3) !important;
     }
 
-    /* RESPONSIVE MOBILE */
-    @media (max-width: 800px) {
-        .row-absensi { flex-direction: column; padding: 20px; text-align: center; gap: 15px; }
-        .col-nama { flex: 100%; font-size: 18px; text-align: center; }
-        .col-stats { flex: 100%; border-left: none; border-top: 1px solid #991b1b; padding-top: 15px; width: 100%; }
-        .col-btn { flex: 100%; width: 100%; }
+    /* Mobile Responsive */
+    @media (max-width: 850px) {
+        .row-wrapper { flex-direction: column; padding: 15px; text-align: center; }
+        .col-nama { margin-bottom: 10px; width: 100%; }
+        .col-data { border-left: none; border-top: 1px solid #991b1b; padding-top: 10px; width: 100%; margin-bottom: 10px; }
+        .col-btn-wrap { width: 100%; }
         div.stButton > button:first-child { width: 90% !important; }
     }
     </style>
@@ -101,11 +98,11 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# --- HEADER ---
+# --- HEADER JAM ---
 wita_now = datetime.now() + timedelta(hours=8)
-st.markdown(f'<div class="header-container"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="clock-container"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-# --- CENTERED CONTROLS ---
+# --- CONTROLS ---
 tgl_pilihan = st.date_input("Tanggal", wita_now.date())
 if st.button("🔍 CARI DATA"):
     st.rerun()
@@ -124,7 +121,7 @@ def direct_submit(form_url, nama):
     st.info(f"🚀 Memproses Absen {nama.split(',')[0]}...")
     time.sleep(2)
 
-def render_list(df, master, form_url, prefix):
+def render_row(df, master, form_url, prefix):
     t_limit, t_pulang = datetime.strptime("09:00", "%H:%M").time(), datetime.strptime("16:00", "%H:%M").time()
     log = {}
     
@@ -146,16 +143,16 @@ def render_list(df, master, form_url, prefix):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "ALPA"})
         clr_status = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
         
-        # BARIS SEJAJAR: Nama | Pagi | Sore | Ket | [ABSEN]
+        # SATU BARIS PENUH (IDENTIK GAMBAR)
         st.markdown(f"""
-        <div class="row-absensi">
+        <div class="row-wrapper">
             <div class="col-nama">{i}. {p.split(',')[0]}</div>
-            <div class="col-stats">
-                <div class="stat-item"><div class="label-kecil">Pagi</div><div class="val-besar">{d['m']}</div></div>
-                <div class="stat-item"><div class="label-kecil">Sore</div><div class="val-besar">{d['p']}</div></div>
-                <div class="stat-item"><div class="label-kecil">Ket</div><div class="status-text" style="color:{clr_status}">{d['k']}</div></div>
+            <div class="col-data">
+                <div class="data-box"><div class="label-k">Pagi</div><div class="val-k">{d['m']}</div></div>
+                <div class="data-box"><div class="label-k">Sore</div><div class="val-k">{d['p']}</div></div>
+                <div class="data-box"><div class="label-k">Ket</div><div style="color:{clr_status}; font-weight:800; font-size:14px;">{d['k']}</div></div>
             </div>
-            <div class="col-btn">
+            <div class="col-btn-wrap">
         """, unsafe_allow_html=True)
         
         if st.button("ABSEN", key=f"btn_{prefix}_{i}"):
@@ -163,9 +160,7 @@ def render_list(df, master, form_url, prefix):
             
         st.markdown("</div></div>", unsafe_allow_html=True)
 
-# --- TABEL DATA ---
+# --- TABS ---
 tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1: render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
-with tab2: render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
-
-st.markdown("<br><br>", unsafe_allow_html=True)
+with tab1: render_row(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
+with tab2: render_row(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
