@@ -9,17 +9,16 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: FULL FREEZE & ANTI-BLANK (STABIL)
+# 2. CSS: ANTI-BLANK & SMOOTH SCROLL
 st.markdown("""
     <style>
-    /* Dasar & Background */
     .stApp { background-color: #1a0505; color: #ffffff; }
     
-    /* Hilangkan Header Bawaan Streamlit */
-    header[data-testid="stHeader"] { visibility: hidden; }
+    /* Sembunyikan Header Bawaan */
+    header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
     .block-container { padding: 0 !important; max-width: 100% !important; }
 
-    /* --- BAGIAN YANG DI-FREEZE (JAM, TANGGAL, TAB) --- */
+    /* --- STICKY HEADER AREA --- */
     .top-fixed {
         position: fixed;
         top: 0;
@@ -27,7 +26,7 @@ st.markdown("""
         right: 0;
         background-color: #1a0505;
         z-index: 1000;
-        padding: 10px 0 0 0;
+        padding-top: 10px;
         border-bottom: 3px solid #7f1d1d;
         text-align: center;
     }
@@ -58,14 +57,14 @@ st.markdown("""
     /* Tab Menu Style */
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; background-color: #1a0505 !important; }
 
-    /* --- AREA SCROLL (DAFTAR PEGAWAI) --- */
-    .scroll-content {
-        margin-top: 360px; /* Jarak aman agar tidak tertutup header */
-        padding: 20px;
+    /* --- AREA KONTEN (SCROLLABLE) --- */
+    .content-wrapper {
+        margin-top: 380px; /* Jarak agar konten tidak tertutup header */
+        padding: 0 10px 100px 10px;
     }
-    @media (max-width: 768px) { .scroll-content { margin-top: 300px; } }
+    @media (max-width: 768px) { .content-wrapper { margin-top: 320px; } }
 
-    /* Card Baris Pegawai */
+    /* Baris Pegawai */
     .row-container {
         display: flex; flex-direction: column; 
         background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
@@ -105,10 +104,9 @@ def get_data(url):
 
 wita_now = datetime.now() + timedelta(hours=8)
 
-# 5. FIXED HEADER (JAM, RUNNING TEXT, TANGGAL)
-# Menggunakan satu div top-fixed untuk membungkus semuanya
+# 5. FIXED HEADER (STABIL)
 st.markdown('<div class="top-fixed">', unsafe_allow_html=True)
-jam_placeholder = st.empty()
+jam_area = st.empty()
 st.markdown(f"""
     <div class="running-text-container">
         <div class="running-text">
@@ -116,15 +114,16 @@ st.markdown(f"""
         </div>
     </div>
 """, unsafe_allow_html=True)
-tgl_pilihan = st.date_input("Pilih Tanggal", wita_now.date(), label_visibility="collapsed")
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
 tab1, tab2, tab3 = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 6. RENDER LOGIC
+# 6. RENDER CONTENT
 def process_log(df, tgl):
     log = {}
     if not df.empty:
-        df_today = df[df.iloc[:, 0].dt.normalize() == pd.Timestamp(tgl)]
+        target = pd.Timestamp(tgl)
+        df_today = df[df.iloc[:, 0].dt.normalize() == target]
         for _, r in df_today.sort_values(by=df.columns[0]).iterrows():
             ts = r.iloc[0]; nama = str(r.iloc[1]).strip().replace("  ", " ")
             if nama not in log:
@@ -132,8 +131,8 @@ def process_log(df, tgl):
             if ts.hour >= 15: log[nama]["p"] = ts.strftime("%H:%M")
     return log
 
-def display_list(log, master, is_all=False):
-    st.markdown('<div class="scroll-content">', unsafe_allow_html=True)
+def render_ui(log, master, is_all=False):
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
     items = []
     for idx, n in enumerate(master):
         nama = n.strip().replace("  ", " "); d = log.get(nama, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
@@ -141,3 +140,39 @@ def display_list(log, master, is_all=False):
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
             elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
             elif wita_now.hour >= 9: d["k"] = "TERLAMBAT"
+        w = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
+        items.append({"n": nama, "d": d, "w": w, "h": idx})
+    
+    if is_all: items = sorted(items, key=lambda x: (x['w'], x['h']))
+    
+    for it in items:
+        n = it["n"]; d = it["d"]; cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
+        target_f = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if n in MASTER_PNS else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
+        link = f"{target_f}?entry.960346359={n.replace(' ', '+')}&submit=Submit"
+        st.markdown(f"""
+            <div class="row-container">
+                <div class="col-nama"><div class="name-box"><a href="{link}" target="_blank">{n.split(',')[0]}</a></div></div>
+                <div class="col-data-wrap">
+                    <div><div class="label-k">Pagi</div><div class="val-v">{d['m']}</div></div>
+                    <div><div class="label-k">Sore</div><div class="val-v">{d['p']}</div></div>
+                    <div><div class="label-k">Ket</div><div style="color:{cl}; font-weight:900;">{d['k']}</div></div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# 7. EXECUTION
+log_pns = process_log(get_data(URL_PNS), tgl_pilihan)
+log_pppk = process_log(get_data(URL_PPPK), tgl_pilihan)
+log_all = {**log_pns, **log_pppk}
+
+with tab1: render_ui(log_all, MASTER_ALL, True)
+with tab2: render_ui(log_pns, MASTER_PNS)
+with tab3: render_ui(log_pppk, MASTER_PPPK)
+
+# 8. REALTIME LOOP
+while True:
+    now = datetime.now() + timedelta(hours=8)
+    jam_area.markdown(f'<div class="header-jam"><div class="clock-text">{now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
+    if now.second == 0: st.rerun()
+    time.sleep(1)
