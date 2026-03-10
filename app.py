@@ -9,30 +9,42 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: INJEKSI STICKY HEADER & CLEAN UI
+# 2. CSS: FULL FREEZE HEADER (JAM, TANGGAL, & TABS)
 st.markdown("""
     <style>
     /* Dasar & Background */
     .stApp { background-color: #1a0505; color: #ffffff; }
     
-    /* MEKANISME STICKY HEADER (FIX SCROLL) */
+    /* Hilangkan Header Bawaan Streamlit */
     header[data-testid="stHeader"] { background: rgba(0,0,0,0); }
-    
     .block-container { padding-top: 0rem !important; max-width: 1200px !important; margin: 0 auto; }
 
-    /* Sticky Container */
+    /* --- FULL FREEZE SECTION --- */
+    /* Mengunci Jam, Tanggal, dan Tab Menu */
     [data-testid="stVerticalBlock"] > div:first-child {
-        position: sticky;
+        position: fixed;
         top: 0;
+        left: 0;
+        right: 0;
         background-color: #1a0505;
-        z-index: 999;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #7f1d1d;
+        z-index: 1000;
+        padding: 10px 0;
+        border-bottom: 3px solid #7f1d1d;
+    }
+
+    /* Memberi jarak agar konten di bawah tab tidak tertutup header yang di-freeze */
+    [data-testid="stVerticalBlock"] > div:nth-child(2) {
+        margin-top: 380px; /* Jarak disesuaikan dengan tinggi header freeze */
+    }
+
+    /* Responsif Margin untuk Mobile */
+    @media (max-width: 768px) {
+        [data-testid="stVerticalBlock"] > div:nth-child(2) { margin-top: 320px; }
     }
 
     .header-jam { text-align: center; }
     .clock-text { 
-        font-size: clamp(45px, 10vw, 85px); 
+        font-size: clamp(40px, 10vw, 80px); 
         font-weight: 900; color: #ffffff; 
         text-shadow: 0 0 20px rgba(249, 115, 22, 0.5); 
         font-family: 'Courier New', Courier, monospace;
@@ -41,7 +53,7 @@ st.markdown("""
     
     .running-text-container { 
         width: 100%; overflow: hidden; margin: 10px 0; 
-        background: rgba(0,0,0,0.3); padding: 8px 0; border-radius: 8px; 
+        background: rgba(0,0,0,0.3); padding: 8px 0;
     }
     .running-text { font-size: clamp(12px, 3vw, 16px); font-weight: 600; color: #ffffff; white-space: nowrap; animation: scroll-left 30s linear infinite; display: inline-block; }
     .highlight { color: #facc15; font-weight: 800; }
@@ -54,6 +66,13 @@ st.markdown("""
     }
     div[data-testid="stDateInput"] label { display: none; }
     div[data-testid="stDateInput"] input { color: #ffffff !important; text-align: center !important; background: transparent !important; border: none !important; font-size: 18px !important; font-weight: bold !important; }
+
+    /* TAB CENTERED & STICKY */
+    .stTabs [data-baseweb="tab-list"] { 
+        justify-content: center !important; 
+        background-color: #1a0505 !important;
+        padding-bottom: 5px;
+    }
 
     /* ROW PEGAWAI */
     .row-container {
@@ -82,8 +101,6 @@ st.markdown("""
     }
     .val-v { font-size: clamp(15px, 4vw, 18px); font-weight: 800; color: #ffffff; }
     .label-k { font-size: 9px; color: #fca5a5; text-transform: uppercase; margin-bottom: 3px; }
-    
-    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -110,11 +127,12 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 ENTRY_ID = "960346359"
 
-# 4. JAM & HEADER STICKY
+# 4. FULL FREEZE HEADER AREA
+# Placeholder ini akan memuat Jam, Running Text, Tanggal, dan Tabs
 header_area = st.empty()
 wita_now = datetime.now() + timedelta(hours=8)
 
-# Input Tanggal (Bagian dari Vertical Block pertama yang di-sticky via CSS)
+# Input Tanggal (Bagian dari Fixed Header)
 col_l, col_m, col_r = st.columns([1, 1.2, 1])
 with col_m:
     tgl_pilihan = st.date_input("Tanggal", wita_now.date())
@@ -132,7 +150,6 @@ def process_log(df, tgl):
         for _, r in df.iterrows():
             ts = r.iloc[0]
             if ts.strftime('%d/%m/%Y') == target:
-                # Normalisasi Nama untuk menghindari error Najmi/Athaya
                 nama = str(r.iloc[1]).strip().replace("  ", " ")
                 if nama not in log:
                     log[nama] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if ts.hour < 9 else "TERLAMBAT"}
@@ -177,7 +194,7 @@ def render_list(log, master_order, sort_priority=False):
             </div>
         """, unsafe_allow_html=True)
 
-# 6. TAMPILAN TAB
+# 6. TAMPILAN TAB (Penting: Tab diletakkan di dalam fixed header secara visual via CSS)
 log_pns = process_log(fetch_raw(URL_PNS), tgl_pilihan)
 log_pppk = process_log(fetch_raw(URL_PPPK), tgl_pilihan)
 combined_log = {**log_pns, **log_pppk}
@@ -187,7 +204,7 @@ with tab_a: render_list(combined_log, MASTER_ALL_HIERARCHY, sort_priority=True)
 with tab_p: render_list(log_pns, MASTER_PNS)
 with tab_k: render_list(log_pppk, MASTER_PPPK)
 
-# 7. UPDATE CLOCK REALTIME
+# 7. UPDATE CLOCK REALTIME & REFRESH
 while True:
     now = datetime.now() + timedelta(hours=8)
     header_area.markdown(f"""
