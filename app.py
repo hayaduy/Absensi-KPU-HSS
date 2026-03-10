@@ -19,7 +19,7 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-st.markdown(f"<h1 style='text-align: center;'>📊 MONITORING ABSENSI KPU HSS</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>📊 MONITORING ABSENSI KPU HSS</h1>", unsafe_allow_html=True)
 st.markdown(f"<h3 style='text-align: center; color: #3498db;'>🕒 {datetime.now().strftime('%H:%M:%S')}</h3>", unsafe_allow_html=True)
 
 col_tgl, col_btn = st.columns([2, 1])
@@ -31,23 +31,14 @@ with col_btn:
 
 def fetch_data(url):
     try:
-        res = requests.get(f"{url}&nocache={random.random()}", timeout=10)
+        res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        # Perbaikan Error: Paksa kolom pertama jadi datetime
-        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True, errors='coerce')
-        return df.dropna(subset=[df.columns[0]])
+        # Paksa konversi semua kolom yang mungkin berisi tanggal
+        for col in df.columns[:2]: # Cek kolom 1 dan 2
+            df[col] = pd.to_datetime(df[col], dayfirst=True, errors='ignore')
+        return df
     except: return pd.DataFrame()
-
-def proses_absen(nama, url):
-    # Kirim data ke Google Form
-    payload = {"entry.960346359": nama} 
-    requests.post(url, data=payload)
-    st.toast(f"✅ Absensi {nama} Terkirim!")
-    time.sleep(1)
-    st.rerun()
-
-tab_pns, tab_pppk = st.tabs(["PEGAWAI PNS", "PEGAWAI PPPK"])
 
 def draw_ui(df, master, form_url):
     t_limit = datetime.strptime("09:00", "%H:%M").time()
@@ -55,17 +46,22 @@ def draw_ui(df, master, form_url):
     log = {}
     
     if not df.empty:
-        # Pastikan kolom waktu valid
-        df_valid = df.copy()
-        df_valid.iloc[:, 0] = pd.to_datetime(df_valid.iloc[:, 0])
-        
-        # Filter berdasarkan tanggal pilihan
-        df_day = df_valid[df_valid.iloc[:, 0].dt.date == tgl_pilihan]
-        df_day = df_day.sort_values(by=df_day.columns[0])
+        # Identifikasi kolom waktu dan nama
+        # Cari kolom yang formatnya datetime
+        df_clean = df.copy()
+        time_col = df_clean.columns[0]
+        name_col = df_clean.columns[1]
+
+        # Konversi kolom waktu secara aman
+        df_clean[time_col] = pd.to_datetime(df_clean[time_col], errors='coerce')
+        df_clean = df_clean.dropna(subset=[time_col])
+
+        # Filter tanggal
+        df_day = df_clean[df_clean[time_col].dt.date == tgl_pilihan]
         
         for _, r in df_day.iterrows():
-            nama = str(r.iloc[1]).strip()
-            jam = r.iloc[0].time()
+            nama = str(r[name_col]).strip()
+            jam = r[time_col].time()
             if nama not in log:
                 log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if jam <= t_limit else "TERLAMBAT"}
             elif jam >= t_pulang:
@@ -79,16 +75,13 @@ def draw_ui(df, master, form_url):
     for i, p in enumerate(sorted(master), 1):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "❌ ALPA"})
         r1, r2, r3, r4, r5, r6 = st.columns([0.5, 3, 1, 1, 1.5, 1])
-        r1.write(str(i))
-        r2.write(f"**{p}**")
-        r3.write(d["m"])
-        r4.write(d["p"])
+        r1.write(str(i)); r2.write(f"**{p}**"); r3.write(d["m"]); r4.write(d["p"])
         color = "green" if "HADIR" in d["k"] else "orange" if "TERLAMBAT" in d["k"] else "red"
         r5.markdown(f":{color}[{d['k']}]")
         if r6.button("ABSEN", key=f"btn_{p}_{i}"):
-            proses_absen(p, form_url)
+            requests.post(form_url, data={"entry.960346359": p})
+            st.toast(f"✅ Absen {p} Sukses!"); time.sleep(1); st.rerun()
 
-with tab_pns:
-    draw_ui(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
-with tab_pppk:
-    draw_ui(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
+tab1, tab2 = st.tabs(["PEGAWAI PNS", "PEGAWAI PPPK"])
+with tab1: draw_ui(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
+with tab2: draw_ui(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
