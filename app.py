@@ -13,8 +13,6 @@ st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initi
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
-    
-    /* Center Jam */
     .header-jam { text-align: center; padding: 10px 0; }
     .clock-text { 
         font-size: 85px; font-weight: 900; color: #ffffff; 
@@ -22,8 +20,6 @@ st.markdown("""
         font-family: 'Courier New', Courier, monospace;
         margin-bottom: 5px;
     }
-    
-    /* Running Text Style */
     .running-text-container {
         width: 100%; overflow: hidden; margin-bottom: 25px;
         background: rgba(0,0,0,0.2); padding: 10px 0;
@@ -35,84 +31,80 @@ st.markdown("""
         display: inline-block;
         letter-spacing: 1px;
     }
-    .highlight {
-        color: #facc15; 
-        font-weight: 800;
-        text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
-    }
-    @keyframes scroll-left {
-        0% { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
-    }
+    .highlight { color: #facc15; font-weight: 800; text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+    @keyframes scroll-left { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     
-    /* Center Date Input */
     div[data-testid="stDateInput"] {
-        width: 400px !important;
-        margin: 0 auto !important;
-        background: rgba(45, 10, 10, 0.8);
-        border: 2px solid #f97316;
-        border-radius: 15px;
-        padding: 5px;
+        width: 400px !important; margin: 0 auto !important;
+        background: rgba(45, 10, 10, 0.8); border: 2px solid #f97316; border-radius: 15px; padding: 5px;
     }
     div[data-testid="stDateInput"] label { display: none; }
-    div[data-testid="stDateInput"] input { 
-        color: #ffffff !important; text-align: center !important;
-        background-color: transparent !important; border: none !important;
-        font-size: 18px !important;
-    }
+    div[data-testid="stDateInput"] input { color: #ffffff !important; text-align: center !important; background-color: transparent !important; border: none !important; font-size: 18px !important; }
 
-    /* Styling Button Scan */
     .stButton { display: flex; justify-content: center; }
     .stButton > button { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
-        color: white !important; 
-        width: 400px !important; 
-        height: 60px !important; font-size: 20px !important; font-weight: 800 !important; 
-        border-radius: 15px !important; border: none !important;
-        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3) !important;
+        color: white !important; width: 400px !important; height: 60px !important; font-size: 20px !important; font-weight: 800 !important; 
+        border-radius: 15px !important; border: none !important; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3) !important;
     }
 
-    /* List Baris Pegawai */
     .row-container {
-        display: flex; align-items: center;
-        background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
+        display: flex; align-items: center; background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
         padding: 15px 25px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #7f1d1d;
         max-width: 1100px; margin-left: auto; margin-right: auto;
     }
-    
-    /* Styling Nama: Soft & Elegant */
     .col-nama { flex: 4; }
-    .name-box {
-        background: rgba(249, 115, 22, 0.08); 
-        padding: 8px 18px;
-        border: 1px solid rgba(249, 115, 22, 0.15);
-        border-radius: 10px;
-        display: inline-block;
-        min-width: 280px;
-    }
-    .name-box a { 
-        color: #fca5a5 !important; 
-        text-decoration: none !important; 
-        font-size: 17px; font-weight: 600; 
-    }
+    .name-box { background: rgba(249, 115, 22, 0.08); padding: 8px 18px; border: 1px solid rgba(249, 115, 22, 0.15); border-radius: 10px; display: inline-block; min-width: 280px; }
+    .name-box a { color: #fca5a5 !important; text-decoration: none !important; font-size: 17px; font-weight: 600; }
     .name-box:hover { background: rgba(249, 115, 22, 0.15); border-color: #f97316; transition: 0.3s; }
-
-    .col-data-wrap { 
-        flex: 6; display: flex; justify-content: space-around; 
-        text-align: center; border-left: 1px solid #7f1d1d; padding: 0 20px;
-    }
+    .col-data-wrap { flex: 6; display: flex; justify-content: space-around; text-align: center; border-left: 1px solid #7f1d1d; padding: 0 20px; }
     .val-v { font-size: 17px; font-weight: 800; color: #ffffff; }
     .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
-
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 10px; border: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MASTER DATA
-MASTER_DATA = {
-    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
-    "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
-}
+# 3. MASTER DATA DENGAN URUTAN HIRARKI (STRUKTURAL)
+# Urutan: Sekretaris -> Kasubbag -> PNS Lain -> PPPK
+MASTER_PNS = [
+    "Suwanto, SH., MH.",           # Sekretaris
+    "Wawan Setiawan, SH",          # Kasubbag
+    "Ineke Setiyaningsih, S.Sos",   # Kasubbag
+    "Farah Agustina Setiawati, SH", # Kasubbag
+    "Rusma Ariati, SE",            # Kasubbag
+    "Helmalina", 
+    "Ahmad Erwan Rifani, S.HI", 
+    "Syaiful Anwar", 
+    "Zainal Hilmi Yustan", 
+    "Najmi Hidayati", 
+    "Jainal Abidin", 
+    "Suci Lestari, S.Ikom", 
+    "Athaya Insyira Khairani, S.H", 
+    "Muhammad Ibnu Fahmi, S.H.", 
+    "Alfian Ridhani, S.Kom", 
+    "Muhammad Aldi Hudaifi, S.Kom", 
+    "Firda Aulia, S.Kom."
+]
+
+MASTER_PPPK = [
+    "Sya'bani Rona Baika", 
+    "Apriadi Rakhman", 
+    "M Satria Maipadly", 
+    "Basuki Rahmat", 
+    "Sulaiman", 
+    "Saldoz Yedi", 
+    "Mastoni Ridani", 
+    "Suriadi", 
+    "Ami Aspihani", 
+    "Abdurrahman", 
+    "Emaliani", 
+    "Muhammad Hafiz Rijani, S.KOM", 
+    "Saiful Fahmi, S.Pd", 
+    "Nadianti"
+]
+
+# Gabungan Hirarki untuk Tab Semua
+MASTER_ALL_HIERARCHY = MASTER_PNS + MASTER_PPPK
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
@@ -157,34 +149,35 @@ def process_log(df, tgl_pilihan):
                     log[nama]["p"] = jam_str
     return log
 
-def render_list(log, master, form_url, sort_priority=False):
+def render_list(log, master_order, sort_priority=False):
     list_to_show = []
-    for p in master:
+    # Menggunakan index urutan master sebagai bobot hirarki
+    for idx, p in enumerate(master_order):
         nama_p = p.strip()
         d = log.get(nama_p, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
         
-        # Logika Status
         if d["k"] == "BELUM ABSEN":
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
             elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
             elif wita_now.hour >= 9: d["k"] = "TERLAMBAT"
             
-        # Tentukan Urutan (Priority 0 untuk yang belum absen)
-        priority = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
-        list_to_show.append({"nama": nama_p, "data": d, "priority": priority})
+        # Bobot Status: 0 untuk yang belum absen (supaya naik), 1 untuk yang sudah hadir
+        status_weight = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
+        list_to_show.append({"nama": nama_p, "data": d, "status_weight": status_weight, "hierarchy_idx": idx})
 
-    # Sorting jika di tab 'Semua'
+    # Logika Pengurutan
     if sort_priority:
-        list_to_show = sorted(list_to_show, key=lambda x: (x['priority'], x['nama']))
+        # Urutkan berdasarkan status_weight dulu (0 naik), baru berdasarkan hirarki aslinya
+        list_to_show = sorted(list_to_show, key=lambda x: (x['status_weight'], x['hierarchy_idx']))
     else:
-        list_to_show = sorted(list_to_show, key=lambda x: x['nama'])
+        # Urutkan murni berdasarkan hirarki (Sekretaris -> Kasubbag -> PNS -> PPPK)
+        list_to_show = sorted(list_to_show, key=lambda x: x['hierarchy_idx'])
 
     for i, item in enumerate(list_to_show, 1):
         nama_p = item["nama"]
         d = item["data"]
         clr = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
-        # Gunakan link form berdasarkan list asalnya (PNS/PPPK)
-        target_form = FORM_PNS if nama_p in MASTER_DATA["PNS"] else FORM_PPPK
+        target_form = FORM_PNS if nama_p in MASTER_PNS else FORM_PPPK
         link_absensi = f"{target_form}?entry.{ENTRY_ID}={nama_p.replace(' ', '+')}&submit=Submit"
         
         st.markdown(f"""
@@ -202,26 +195,24 @@ def render_list(log, master, form_url, sort_priority=False):
         </div>
         """, unsafe_allow_html=True)
 
-# LOAD SEMUA DATA
+# 7. LOAD DATA
 log_pns = process_log(fetch_data(URL_PNS), tgl_pilihan)
 log_pppk = process_log(fetch_data(URL_PPPK), tgl_pilihan)
 combined_log = {**log_pns, **log_pppk}
-all_names = MASTER_DATA["PNS"] + MASTER_DATA["PPPK"]
 
-# 7. TABS (Sekarang ada 3 Tab)
+# 8. TABS
 tab_all, tab_pns, tab_pppk = st.tabs(["🌎 SEMUA PEGAWAI", "👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
 
 with tab_all:
-    # sort_priority=True agar yang belum absen di atas
-    render_list(combined_log, all_names, None, sort_priority=True)
+    render_list(combined_log, MASTER_ALL_HIERARCHY, sort_priority=True)
 
 with tab_pns:
-    render_list(log_pns, MASTER_DATA["PNS"], FORM_PNS)
+    render_list(log_pns, MASTER_PNS, sort_priority=False)
 
 with tab_pppk:
-    render_list(log_pppk, MASTER_DATA["PPPK"], FORM_PPPK)
+    render_list(log_pppk, MASTER_PPPK, sort_priority=False)
 
-# 8. LOGIKA JAM & REFRESH 60 DETIK
+# 9. LOGIKA JAM & REFRESH 60 DETIK
 while True:
     wita_tick = datetime.now() + timedelta(hours=8)
     placeholder_header.markdown(f"""
@@ -236,8 +227,6 @@ while True:
             </div>
         </div>
     """, unsafe_allow_html=True)
-    
     if wita_tick.second == 0:
         st.rerun()
-        
     time.sleep(1)
