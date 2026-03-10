@@ -7,56 +7,51 @@ import random
 from io import StringIO
 
 # Konfigurasi Halaman
-st.set_page_config(page_title="KPU HSS Presence", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: MODERN & MINIMALIST UI ---
+# --- CSS: MODERN UI DENGAN LABEL PAGI & SORE ---
 st.markdown("""
     <style>
-    /* Main Background */
     .stApp { background-color: #0e1117; color: #e0e0e0; }
     
     /* Header & Clock */
-    .header-container { text-align: center; padding: 20px 0; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 0 0 30px 30px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-    .main-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; color: #38bdf8; margin-bottom: 5px; }
-    .clock-text { font-size: 48px; font-family: 'Courier New', Courier, monospace; font-weight: bold; color: #f8fafc; }
+    .header-container { text-align: center; padding: 25px 0; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 0 0 35px 35px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); border-bottom: 2px solid #38bdf8; }
+    .main-title { font-size: 20px; font-weight: 800; color: #38bdf8; letter-spacing: 2px; text-transform: uppercase; }
+    .clock-text { font-size: 55px; font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #ffffff; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
     
-    /* Date & Scan Section */
+    /* Input & Refresh Area */
     div[data-testid="stDateInput"] label { display: none; }
-    div[data-testid="stDateInput"] > div { border-radius: 15px !important; background: #1e293b !important; border: 1px solid #334155 !important; }
+    .stButton > button { border-radius: 12px !important; transition: all 0.3s ease !important; }
     
-    .stButton > button {
-        border-radius: 15px !important; width: 100% !important; transition: all 0.3s ease !important;
-        font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 1px !important;
+    /* Refresh Button */
+    div.stButton > button:first-child { 
+        background: #1e293b !important; color: #38bdf8 !important; height: 45px !important; 
+        border: 1px solid #38bdf8 !important; font-weight: bold !important;
     }
-    
-    /* Scan Button Style */
-    div.stButton > button:first-child { background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%) !important; color: white !important; height: 55px !important; border: none !important; font-size: 18px !important; }
-    div.stButton > button:first-child:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(217, 119, 6, 0.4); }
 
-    /* Table & Card Container */
-    .presence-row { display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 15px 20px; border-radius: 18px; margin-bottom: 12px; border: 1px solid #334155; }
-    .name-section { flex: 3; }
-    .name-text { font-size: 16px; font-weight: 600; color: #f1f5f9; }
-    .info-section { flex: 2; display: flex; justify-content: space-around; text-align: center; }
-    .info-box { flex: 1; }
-    .info-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; }
-    .info-val { font-size: 14px; font-weight: 700; color: #cbd5e1; }
+    /* Card Design */
+    .presence-card { 
+        background: #1e293b; padding: 18px; border-radius: 20px; margin-bottom: 12px; 
+        border: 1px solid #334155; display: flex; align-items: center; justify-content: space-between;
+    }
+    .user-info { flex: 2.5; }
+    .user-name { font-size: 17px; font-weight: 700; color: #f8fafc; }
     
-    /* Action Buttons P & S */
-    .btn-action { width: 50px !important; height: 50px !important; border-radius: 12px !important; font-size: 18px !important; }
+    .stats-info { flex: 2; display: flex; justify-content: space-around; text-align: center; border-left: 1px solid #334155; margin-left: 15px; }
+    .stat-box { flex: 1; }
+    .stat-label { font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .stat-val { font-size: 15px; font-weight: 700; color: #f1f5f9; }
     
-    /* Responsive Fix for Mobile */
+    /* Responsive Mobile */
     @media (max-width: 768px) {
-        .presence-row { flex-direction: column; text-align: center; padding: 20px; }
-        .name-section { margin-bottom: 15px; }
-        .info-section { width: 100%; margin-bottom: 15px; }
-        .action-section { display: flex; gap: 10px; width: 100%; }
-        .btn-action { flex: 1; height: 55px !important; }
+        .presence-card { flex-direction: column; text-align: center; }
+        .stats-info { border: none; margin: 15px 0; width: 100%; border-top: 1px solid #334155; padding-top: 10px; }
+        .btn-container { width: 100%; }
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- MASTER DATA ---
+# --- DATA PEGAWAI ---
 MASTER_DATA = {
     "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
@@ -69,20 +64,23 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# --- HEADER SECTION ---
+# --- LOGIKA WAKTU & LABEL ---
 wita_now = datetime.now() + timedelta(hours=8)
+is_pagi_time = wita_now.hour < 16
+label_absen = "ABSEN PAGI" if is_pagi_time else "ABSEN SORE"
+color_btn = "#f59e0b" if is_pagi_time else "#3b82f6"
+
 st.markdown(f"""
     <div class="header-container">
-        <div class="main-title">KPU HULU SUNGAI SELATAN</div>
+        <div class="main-title">KPU KABUPATEN HULU SUNGAI SELATAN</div>
         <div class="clock-text">{wita_now.strftime('%H:%M:%S')}</div>
     </div>
     """, unsafe_allow_html=True)
 
-# --- CONTROLS SECTION ---
-c1, c2, c3 = st.columns([1, 2, 1])
+c1, c2, c3 = st.columns([1, 1.5, 1])
 with c2:
-    tgl_pilihan = st.date_input("Pilih Tanggal", wita_now.date())
-    if st.button("🚀 SCAN DATA SEKARANG"): st.rerun()
+    tgl_pilihan = st.date_input("Tanggal", wita_now.date())
+    if st.button("🔄 PERBARUI DATA"): st.rerun()
 
 def fetch_data(url):
     try:
@@ -94,13 +92,13 @@ def direct_submit(form_url, nama):
     import urllib.parse
     enc_nama = urllib.parse.quote(nama)
     final_url = f"{form_url}?entry.{E_ID}={enc_nama}&submit=Submit"
-    
     st.markdown(f"""<meta http-equiv="refresh" content="0;URL='{final_url}'">""", unsafe_allow_html=True)
-    st.info(f"🔄 Redirecting {nama.split(',')[0]} to Secure Submit...")
+    st.info(f"🚀 Memproses {label_absen} {nama.split(',')[0]}...")
     time.sleep(2)
 
-def render_modern_list(df, master, form_url, prefix):
-    t_batas, t_pulang = datetime.strptime("09:00", "%H:%M").time(), datetime.strptime("16:00", "%H:%M").time()
+def render_list(df, master, form_url, prefix):
+    t_batas = datetime.strptime("09:00", "%H:%M").time()
+    t_pulang = datetime.strptime("16:00", "%H:%M").time()
     log = {}
     
     if not df.empty:
@@ -119,37 +117,41 @@ def render_modern_list(df, master, form_url, prefix):
     st.markdown("<br>", unsafe_allow_html=True)
     for i, p in enumerate(sorted(master), 1):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "ALPA"})
-        clr = "#22c55e" if d["k"]=="HADIR" else "#f59e0b" if d["k"]=="TERLAMBAT" else "#ef4444"
+        clr_status = "#22c55e" if d["k"]=="HADIR" else "#f59e0b" if d["k"]=="TERLAMBAT" else "#ef4444"
         
-        # Row Container
         with st.container():
-            col_data, col_actions = st.columns([5, 1.5])
-            
-            with col_data:
+            col_info, col_btn = st.columns([5, 2])
+            with col_info:
                 st.markdown(f"""
-                <div class="presence-row">
-                    <div class="name-section">
-                        <div class="name-text">{i}. {p.split(',')[0]}</div>
+                <div class="presence-card">
+                    <div class="user-info">
+                        <div class="user-name">{i}. {p.split(',')[0]}</div>
                     </div>
-                    <div class="info-section">
-                        <div class="info-box"><div class="info-label">In</div><div class="info-val">{d['m']}</div></div>
-                        <div class="info-box"><div class="info-label">Out</div><div class="info-val">{d['p']}</div></div>
-                        <div class="info-box"><div class="info-label">Status</div><div class="info-val" style="color:{clr}">{d['k']}</div></div>
+                    <div class="stats-info">
+                        <div class="stat-box"><div class="stat-label">Pagi</div><div class="stat-val">{d['m']}</div></div>
+                        <div class="stat-box"><div class="stat-label">Sore</div><div class="stat-val">{d['p']}</div></div>
+                        <div class="stat-box"><div class="stat-label">Ket</div><div class="stat-val" style="color:{clr_status}">{d['k']}</div></div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-            
-            with col_actions:
-                btn_p, btn_s = st.columns(2)
-                with btn_p:
-                    if st.button("P", key=f"p_{prefix}_{i}"): direct_submit(form_url, p)
-                with btn_s:
-                    if st.button("S", key=f"s_{prefix}_{i}"): direct_submit(form_url, p)
+            with col_btn:
+                if st.button(f"{label_absen}", key=f"btn_{prefix}_{i}"):
+                    direct_submit(form_url, p)
+                # Suntik CSS tombol khusus untuk kolom absen
+                st.markdown(f"""
+                    <style>
+                    div[data-testid="column"]:nth-child(2) button {{
+                        background: {color_btn} !important; color: white !important;
+                        height: 55px !important; margin-top: 12px !important;
+                        font-weight: 800 !important; width: 100% !important;
+                        box-shadow: 0 4px 10px {color_btn}44 !important;
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
 
-# --- TABS SECTION ---
-st.markdown("<br>", unsafe_allow_html=True)
-tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1: render_modern_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
-with tab2: render_modern_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
+# --- TABS ---
+tab1, tab2 = st.tabs(["👥 PNS", "👥 PPPK"])
+with tab1: render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
+with tab2: render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
 
-st.markdown("""<div style="text-align:center; color:#475569; padding:30px; font-size:12px;">© 2026 KPU Kabupaten Hulu Sungai Selatan</div>""", unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
