@@ -8,29 +8,16 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- MASUKKAN URL HASIL DEPLOY APPS SCRIPT DI SINI ---
-API_PNS = "URL_WEB_APP_PNS_ABANG" 
-API_PPPK = "URL_WEB_APP_PPPK_ABANG"
-
-# --- DATA MASTER ---
-MASTER_DATA = {
-    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
-    "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
-}
-
-URL_CSV_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
-URL_CSV_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
-
-# --- CSS: TETAP HORIZONTAL & RAPI ---
+# --- CSS: TETAP HORIZONTAL & TOMBOL KOTAK ---
 st.markdown("""
     <style>
     .centered { text-align: center; width: 100%; }
     .clock-style { font-size: 50px; color: #3498db; font-weight: bold; margin-bottom: 5px; }
     
-    /* Tombol Cek Data di Tengah */
+    /* Tombol Cek Data Tengah */
     div.stButton > button:first-child {
         background-color: #d35400 !important; color: white !important;
-        width: 85% !important; height: 50px !important; margin: 10px auto !important; 
+        width: 85% !important; height: 55px !important; margin: 10px auto !important; 
         display: block !important; border-radius: 10px !important;
     }
 
@@ -41,13 +28,28 @@ st.markdown("""
         border-bottom: 1px solid #444; padding: 10px 0; min-width: 650px;
     }
 
-    /* Tombol P & S Kotak */
+    /* Tombol P & S Kotak Gede */
     .stButton button[kind="primary"], .stButton button[kind="secondary"] {
-        border-radius: 8px !important; width: 100% !important; height: 45px !important;
-        font-weight: bold !important; font-size: 16px !important;
+        border-radius: 8px !important; width: 100% !important; height: 50px !important;
+        font-weight: bold !important; font-size: 18px !important;
     }
     </style>
     """, unsafe_allow_html=True)
+
+# --- MASTER DATA ---
+MASTER_DATA = {
+    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
+    "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
+}
+
+# Link CSV Monitoring
+URL_CSV_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
+URL_CSV_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
+
+# Konfigurasi Google Form
+E_ID = "960346359"
+FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
+FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
 wita_now = datetime.now() + timedelta(hours=8)
 st.markdown("<h3 class='centered'>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_allow_html=True)
@@ -63,20 +65,25 @@ def fetch_data(url):
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
-def kirim_auto(api_url, nama, tipe):
-    if "URL_WEB_APP" in api_url:
-        st.error("Isi URL Apps Script dulu Bang!")
-        return
-    try:
-        with st.spinner(f"Mengirim {tipe}..."):
-            res = requests.get(f"{api_url}?nama={nama}", timeout=15)
-            if res.status_code == 200:
-                st.toast(f"✅ {nama.split(',')[0]} Berhasil!")
-                time.sleep(1)
-                st.rerun()
-    except: st.error("Koneksi Gagal!")
+# MESIN REDIRECT CEPAT (ANTI ERROR 400)
+def kirim_absen(form_url, nama):
+    import urllib.parse
+    enc_nama = urllib.parse.quote(nama)
+    # URL Submit Langsung
+    final_url = f"{form_url}?entry.{E_ID}={enc_nama}&submit=Submit"
+    
+    st.info(f"⏳ Mengirim Absen {nama.split(',')[0]}...")
+    
+    # JavaScript untuk buka link di tab yang sama dan langsung submit
+    js = f"""
+    <script>
+        window.location.href = "{final_url}";
+    </script>
+    """
+    st.components.v1.html(js, height=0)
+    time.sleep(2)
 
-def render_view(df, master, api_url, prefix):
+def render_view(df, master, form_url, prefix):
     t_batas, t_out = datetime.strptime("09:00", "%H:%M").time(), datetime.strptime("16:00", "%H:%M").time()
     log = {}
     if not df.empty:
@@ -88,6 +95,7 @@ def render_view(df, master, api_url, prefix):
                     dt = pd.to_datetime(ts, dayfirst=True)
                     nama, jam = str(r.iloc[1]).strip(), dt.time()
                     if nama not in log:
+                        # Tetap catat Pagi meskipun lewat jam 9 (Status TLT)
                         log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_batas else "TLT"}
                     elif jam >= t_out: log[nama]["p"] = jam.strftime("%H:%M")
                 except: continue
@@ -103,10 +111,10 @@ def render_view(df, master, api_url, prefix):
         c1.write(i); c2.write(f"**{p.split(',')[0]}**")
         c3.write(d["m"]); c4.write(d["p"]); c5.markdown(f":{clr}[**{d['k']}**]")
         with c6:
-            if st.button("P", key=f"p_{prefix}_{i}"): kirim_auto(api_url, p, "Pagi")
+            if st.button("P", key=f"p_{prefix}_{i}"): kirim_absen(form_url, p)
         with c7:
-            if st.button("S", key=f"s_{prefix}_{i}"): kirim_auto(api_url, p, "Sore")
+            if st.button("S", key=f"s_{prefix}_{i}"): kirim_absen(form_url, p)
 
 tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1: render_view(fetch_data(URL_CSV_PNS), MASTER_DATA["PNS"], API_PNS, "pns")
-with tab2: render_view(fetch_data(URL_CSV_PPPK), MASTER_DATA["PPPK"], API_PPPK, "pppk")
+with tab1: render_view(fetch_data(URL_CSV_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
+with tab2: render_view(fetch_data(URL_CSV_PPPK), MASTER_DATA["PPPK"], FORM_PPPK, "pppk")
