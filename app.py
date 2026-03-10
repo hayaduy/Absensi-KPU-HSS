@@ -8,31 +8,28 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS: ULTIMATE MOBILE FIX ---
+# --- CSS: TETAP RAPI & SEJAJAR ---
 st.markdown("""
     <style>
     .centered { text-align: center; width: 100%; }
     .clock-style { font-size: 50px; color: #3498db; font-weight: bold; margin-bottom: 0px; }
     
-    /* Tombol Cek di Tengah */
     div.stButton > button:first-child {
         background-color: #d35400 !important; color: white !important;
         width: 85% !important; height: 55px !important; margin: 10px auto !important; 
         display: block !important; border-radius: 10px !important; font-size: 18px !important;
     }
 
-    /* KUNCI HORIZONTAL: Biar ga ancur di HP Vertikal */
     .stHorizontalBlock {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         border-bottom: 1px solid #444;
-        padding: 12px 0;
-        min-width: 650px; /* Paksa lebar agar tetap sejajar di HP */
+        padding: 10px 0;
+        min-width: 650px;
     }
 
-    /* TOMBOL ABSEN KOTAK RAPI */
     .stButton button[kind="primary"], .stButton button[kind="secondary"] {
         border-radius: 6px !important;
         width: 100% !important;
@@ -41,11 +38,7 @@ st.markdown("""
         font-size: 16px !important;
     }
     
-    /* Jarak antar kolom tombol dirapatkan */
     div[data-testid="column"] { padding: 0 2px !important; }
-
-    /* Sembunyikan Iframe */
-    .hidden-iframe { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -55,19 +48,16 @@ MASTER_DATA = {
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
 }
 
-# Link Spreadsheet Monitoring (CSV)
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 
-# --- ENTRY ID HASIL INSPECT TADI ---
+# --- ENTRY ID & FORM ENDPOINT ---
 E_ID = "960346359"
-
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
-# --- WAKTU ---
 wita_now = datetime.now() + timedelta(hours=8)
-is_pagi_time = wita_now.hour < 16 # Pagi aktif sampai jam 4 sore
+is_pagi_time = wita_now.hour < 16
 
 st.markdown("<h3 class='centered'>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_allow_html=True)
 st.markdown(f"<div class='centered clock-style'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
@@ -82,15 +72,17 @@ def fetch_data(url):
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
-# MESIN ABSEN JALUR BELAKANG
-def submit_absen(url, nama):
+# MESIN SUBMIT BARU: URL REDIRECT (ANTI-BLOCK)
+def trigger_submit(form_url, nama):
     import urllib.parse
     enc_nama = urllib.parse.quote(nama)
-    # Link submit langsung (Silent Submit)
-    final_url = f"{url}?entry.{E_ID}={enc_nama}&submit=Submit"
-    st.markdown(f'<iframe class="hidden-iframe" src="{final_url}"></iframe>', unsafe_allow_html=True)
-    st.toast(f"✅ Absen Terkirim: {nama.split(',')[0]}")
-    time.sleep(1)
+    # Link submit langsung
+    final_url = f"{form_url}?entry.{E_ID}={enc_nama}&submit=Submit"
+    
+    # Trik: Redirect otomatis ke link submit, lalu balik lagi
+    st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{final_url}\'">', unsafe_allow_html=True)
+    st.write(f"Sedang memproses absen {nama.split(',')[0]}...")
+    time.sleep(2)
     st.rerun()
 
 def render_view(df, master, form_url, prefix):
@@ -114,7 +106,6 @@ def render_view(df, master, form_url, prefix):
                 except: continue
 
     st.write("---")
-    # Layout Kolom Sejajar (Fixed Ratio)
     h1, h2, h3, h4, h5, h6, h7 = st.columns([0.4, 3.4, 1.1, 1.1, 0.8, 0.9, 0.9])
     h1.write("#"); h2.write("NAMA"); h3.write("IN"); h4.write("OUT"); h5.write("ST"); h6.write("P"); h7.write("S")
     
@@ -128,10 +119,10 @@ def render_view(df, master, form_url, prefix):
         
         with c6:
             if st.button("P", key=f"p_{prefix}_{i}", disabled=not is_pagi_time):
-                submit_absen(form_url, p)
+                trigger_submit(form_url, p)
         with c7:
             if st.button("S", key=f"s_{prefix}_{i}", disabled=is_pagi_time):
-                submit_absen(form_url, p)
+                trigger_submit(form_url, p)
 
 tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
 with tab1: render_view(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS, "pns")
