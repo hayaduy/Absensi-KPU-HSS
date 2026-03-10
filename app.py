@@ -14,7 +14,6 @@ st.markdown("""
     .centered { text-align: center; width: 100%; }
     .clock-style { font-size: 60px; color: #3498db; font-weight: bold; margin-bottom: 0px; }
     
-    /* Tombol Cek Absen Gede & Tengah */
     div[data-testid="stDateInput"] { margin: 0 auto; width: 85% !important; }
     div.stButton > button:first-child {
         background-color: #d35400 !important;
@@ -28,14 +27,12 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* Baris Zebra */
     [data-testid="stVerticalBlock"] > div:nth-child(even) {
         background-color: rgba(255, 255, 255, 0.05);
         border-radius: 8px;
         padding: 5px;
     }
 
-    /* Tombol P & S Bulat */
     .stButton button {
         border-radius: 50% !important;
         width: 48px !important;
@@ -73,8 +70,7 @@ def fetch_data(url):
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        # FIX: Ubah kolom 1 ke string, lalu ke datetime secara sangat hati-hati
-        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0].astype(str), dayfirst=True, errors='coerce')
+        # Kita biarkan datanya apa adanya (String), jangan dipaksa ke Datetime dulu di sini
         return df.dropna(subset=[df.columns[0]])
     except: return pd.DataFrame()
 
@@ -87,22 +83,30 @@ def kirim_absen(url, nama, sesi):
     except: st.error("Gagal kirim data.")
 
 def render_list(df, master, form_url, prefix):
-    t_m, t_p = datetime.strptime("09:00", "%H:%M").time(), datetime.strptime("16:00", "%H:%M").time()
+    t_m = datetime.strptime("09:00", "%H:%M").time()
+    t_p = datetime.strptime("16:00", "%H:%M").time()
     log = {}
     
     if not df.empty:
-        # FIX: Filter tanggal menggunakan perbandingan string YYYY-MM-DD yang jauh lebih stabil
-        tgl_target_str = tgl_pilihan.strftime('%Y-%m-%d')
-        # Pastikan kolom 0 adalah datetime sebelum menggunakan .dt
-        df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0])
-        df_day = df[df.iloc[:, 0].dt.strftime('%Y-%m-%d') == tgl_target_str]
+        # LOGIKA BARU: Kita filter manual tanpa menggunakan .dt (Anti Error)
+        target_str = tgl_pilihan.strftime('%d/%m/%Y') # Sesuaikan format Sheets
+        target_str_alt = tgl_pilihan.strftime('%Y-%m-%d')
         
-        for _, r in df_day.iterrows():
-            nama, jam = str(r.iloc[1]).strip(), r.iloc[0].time()
-            if nama not in log:
-                log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_m else "TLT"}
-            elif jam >= t_p:
-                log[nama]["p"] = jam.strftime("%H:%M")
+        for _, r in df.iterrows():
+            raw_val = str(r.iloc[0]) # Kolom Timestamp
+            # Cek apakah baris ini sesuai tanggal pilihan (cek kecocokan teks)
+            if target_str in raw_val or target_str_alt in raw_val:
+                try:
+                    # Ambil jamnya saja secara manual
+                    dt_obj = pd.to_datetime(raw_val, dayfirst=True)
+                    nama, jam = str(r.iloc[1]).strip(), dt_obj.time()
+                    
+                    if nama not in log:
+                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HDR" if jam <= t_m else "TLT"}
+                    elif jam >= t_p:
+                        log[nama]["p"] = jam.strftime("%H:%M")
+                except:
+                    continue
 
     # Header
     st.write("---")
