@@ -9,17 +9,17 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# 2. CSS: Tampilan Minimalis & Modern
+# 2. CSS: SEDERHANA, MODERN, & ORGANIZED
 st.markdown("""
     <style>
     .stApp { background-color: #1a1a1a; color: #ffffff; }
-    .clock-container { text-align: center; padding: 15px; background: #2d2d2d; border-radius: 15px; margin-bottom: 20px; border: 1px solid #444; }
-    .clock-text { font-size: 50px; font-weight: bold; color: #f97316; }
+    .clock-container { text-align: center; padding: 20px; background: #2d2d2d; border-radius: 15px; margin-bottom: 25px; border: 1px solid #444; }
+    .clock-text { font-size: 50px; font-weight: bold; color: #f97316; text-shadow: 0 0 10px rgba(249,115,22,0.3); }
     
-    /* Card Style */
-    .card { 
+    /* Card Style untuk Pegawai */
+    .emp-card { 
         background: #2d2d2d; 
-        padding: 20px; 
+        padding: 18px; 
         border-radius: 12px; 
         margin-bottom: 12px; 
         border-left: 6px solid #f97316;
@@ -28,10 +28,11 @@ st.markdown("""
         align-items: center;
     }
     .emp-name { font-size: 18px; font-weight: bold; color: #ffffff; text-decoration: none; }
-    .status-text { font-weight: 900; font-size: 14px; }
+    .emp-name:hover { color: #f97316; }
+    .status-badge { font-weight: 900; font-size: 14px; text-transform: uppercase; }
     
     /* Sidebar */
-    [data-testid="stSidebar"] { background-color: #121212 !important; }
+    [data-testid="stSidebar"] { background-color: #121212 !important; border-right: 1px solid #333; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -47,24 +48,28 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# 4. SIDEBAR CONTROL
+# 4. SIDEBAR (KONTROL UTAMA)
 with st.sidebar:
-    st.title("📌 NAVIGASI")
-    menu = st.radio("Pilih Menu:", ["🏠 Absensi Harian", "📊 Rekap Bulanan"])
+    st.title("📌 MENU")
+    menu = st.radio("Pilih Tampilan:", ["🏠 Absensi Hari Ini", "📊 Rekap & Sorting"])
     st.divider()
     
-    st.subheader("⚙️ Pengaturan")
+    st.subheader("⚙️ Opsi")
+    # SAKLAR AUTO REFRESH
     auto_refresh = st.toggle("Aktifkan Auto Refresh", value=True)
-    if st.button("🔄 Segarkan Sekarang", use_container_width=True):
+    if st.button("🔄 Segarkan Manual", use_container_width=True):
         st.rerun()
+    
+    st.divider()
+    st.caption("v2.1 - KPU HSS")
 
 # 5. JAM DIGITAL (WITA)
 wita_now = datetime.now() + timedelta(hours=8)
 st.markdown(f'<div class="clock-container"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-# 6. FUNGSI AMBIL DATA
-@st.cache_data(ttl=20)
-def load_data_source():
+# 6. FUNGSI LOAD DATA
+@st.cache_data(ttl=30)
+def load_data():
     try:
         r1 = requests.get(f"{URL_PNS}&nc={random.random()}", timeout=10).text
         r2 = requests.get(f"{URL_PPPK}&nc={random.random()}", timeout=10).text
@@ -75,17 +80,19 @@ def load_data_source():
         return df1, df2
     except: return pd.DataFrame(), pd.DataFrame()
 
-df_pns, df_pppk = load_data_source()
+df_pns, df_pppk = load_data()
 
-# 7. LOGIKA TAMPILAN
-if menu == "🏠 Absensi Harian":
-    selected_tgl = st.date_input("Pilih Tanggal Pantauan", wita_now.date())
-    tpns, tpppk = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
+# 7. LOGIKA MENU
+if menu == "🏠 Absensi Hari Ini":
+    tgl_pilih = st.date_input("Filter Tanggal", wita_now.date())
+    tab_pns, tab_pppk = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
     
+    # FUNGSI UNTUK MERENDER DAFTAR (PENGGANTI render_list)
     def render_view(df, master, form_url):
         log = {}
         if not df.empty:
-            df_filtered = df[df.iloc[:, 0].dt.date == selected_tgl]
+            mask = df.iloc[:, 0].dt.date == tgl_pilih
+            df_filtered = df[mask]
             for _, r in df_filtered.iterrows():
                 nama, dt = str(r.iloc[1]).strip(), r.iloc[0]
                 if nama not in log:
@@ -94,8 +101,14 @@ if menu == "🏠 Absensi Harian":
                 elif dt.hour >= 16: log[nama]["p"] = dt.strftime("%H:%M")
         
         for p in sorted(master):
-            d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
+            n = p.strip()
+            d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
             
-            # Logika Otomatis Status
+            # Logika Status Otomatis
             if d["k"] == "BELUM ABSEN":
-                if selected_tgl < wita_
+                if tgl_pilih < wita_now.date(): d["k"] = "ALPA"
+                elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
+                elif wita_now.hour >= 9: d["k"] = "TERLAMBAT"
+
+            clr = "#4ade80" if d["k"]=="HADIR" else "#60a5fa" if d["k"]=="BELUM ABSEN" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
+            link = f"{form_url
