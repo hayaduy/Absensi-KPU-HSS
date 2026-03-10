@@ -25,10 +25,10 @@ st.markdown("""
     }
     div[data-testid="stDateInput"] label { display: none; }
 
-    /* --- PERBAIKAN TOMBOL CARI DATA (CENTERED) --- */
+    /* --- TOMBOL CARI DATA (CENTERED) --- */
     div.stButton {
         display: flex;
-        justify-content: center; /* Perintah peletakan di tengah */
+        justify-content: center; 
         width: 100%;
     }
     
@@ -43,8 +43,6 @@ st.markdown("""
         border-radius: 15px !important;
         border: 1px solid #fb923c !important;
         box-shadow: 0 0 15px rgba(234, 88, 12, 0.4) !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
         margin-top: 15px;
     }
 
@@ -89,41 +87,69 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 E_ID = "960346359"
 
-# 4. JAM & KONTROL ATAS
+# 4. JAM & KONTROL ATAS (Paksa WITA karena Server GitHub UTC)
 wita_now = datetime.now() + timedelta(hours=8)
 st.markdown(f'<div class="header-jam"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-# Input Tanggal dan Tombol Cari dalam satu alur tengah
 tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
 if st.button("🔍 CARI DATA"):
     st.rerun()
 
-# 5. FUNGSI RENDER LIST
+# 5. FUNGSI LOGIKA DATA
 def fetch_data(url):
     try:
+        # Menambahkan parameter random agar data tidak tersangkut di cache server GitHub
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         return pd.read_csv(StringIO(res.text))
     except: return pd.DataFrame()
 
 def render_list(df, master, form_url):
-    today = tgl_pilihan.strftime('%d/%m/%Y')
+    today_str = tgl_pilihan.strftime('%d/%m/%Y')
+    wita_current = datetime.now() + timedelta(hours=8)
     log = {}
+    
+    # Baca data dari Spreadsheet
     if not df.empty:
         for _, r in df.iterrows():
             ts = str(r.iloc[0])
-            if today in ts:
+            if today_str in ts:
                 try:
                     dt = pd.to_datetime(ts, dayfirst=True)
                     nama, jam = str(r.iloc[1]).strip(), dt.time()
                     if nama not in log:
-                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if jam.hour < 9 else "TERLAMBAT"}
-                    elif jam.hour >= 16: log[nama]["p"] = jam.strftime("%H:%M")
+                        # Penentuan status awal bagi yang sudah absen
+                        status_awal = "HADIR" if jam.hour < 9 else "TERLAMBAT"
+                        log[nama] = {"m": jam.strftime("%H:%M"), "p": "--:--", "k": status_awal}
+                    elif jam.hour >= 16: 
+                        log[nama]["p"] = jam.strftime("%H:%M")
                 except: continue
 
     st.markdown("<br>", unsafe_allow_html=True)
+    
     for i, p in enumerate(sorted(master), 1):
-        d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "ALPA"})
-        clr = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
+        nama_p = p.strip()
+        
+        if nama_p in log:
+            d = log[nama_p]
+        else:
+            # LOGIKA SESUAI PERMINTAAN USER
+            if tgl_pilihan < wita_current.date():
+                ket_status = "ALPA"
+            elif wita_current.hour >= 16:
+                ket_status = "LAPOR KASUBBAG"
+            elif wita_current.hour >= 9:
+                ket_status = "TERLAMBAT"
+            else:
+                ket_status = "BELUM ABSEN"
+                
+            d = {"m": "--:--", "p": "--:--", "k": ket_status}
+
+        # Penentuan Warna
+        if d["k"] == "HADIR": clr = "#4ade80"       # Hijau
+        elif d["k"] == "BELUM ABSEN": clr = "#60a5fa" # Biru (Informatif)
+        elif d["k"] == "TERLAMBAT": clr = "#fb923c"   # Oranye
+        else: clr = "#f87171"                         # Merah (Lapor Kasubbag / Alpa)
+
         link = f"{form_url}?entry.{E_ID}={p.replace(' ', '+')}&submit=Submit"
         
         st.markdown(f"""
@@ -147,6 +173,6 @@ with tab2:
     data_pppk = fetch_data(URL_PPPK)
     render_list(data_pppk, MASTER_DATA["PPPK"], FORM_PPPK)
 
-# Auto Refresh 30 Detik
+# Refresh otomatis setiap 30 detik agar jam dan data terupdate
 time.sleep(30)
 st.rerun()
