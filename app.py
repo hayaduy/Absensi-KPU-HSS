@@ -9,7 +9,7 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: RUNNING TEXT, SOFT NAME BOX, & CENTER LAYOUT
+# 2. CSS: RUNNING TEXT DENGAN HIGHLIGHT & UI CENTER
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
@@ -25,14 +25,20 @@ st.markdown("""
     
     /* Running Text Style */
     .running-text-container {
-        width: 100%; overflow: hidden; margin-bottom: 20px;
+        width: 100%; overflow: hidden; margin-bottom: 25px;
+        background: rgba(0,0,0,0.2); padding: 10px 0;
     }
     .running-text {
-        font-size: 18px; font-weight: 600; color: #f97316;
+        font-size: 19px; font-weight: 600; color: #ffffff;
         white-space: nowrap;
-        animation: scroll-left 25s linear infinite;
+        animation: scroll-left 30s linear infinite;
         display: inline-block;
-        letter-spacing: 2px;
+        letter-spacing: 1px;
+    }
+    .highlight {
+        color: #facc15; /* Kuning Terang */
+        font-weight: 800;
+        text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
     }
     @keyframes scroll-left {
         0% { transform: translateX(100%); }
@@ -55,7 +61,7 @@ st.markdown("""
         font-size: 18px !important;
     }
 
-    /* Styling Button Scan (Center) */
+    /* Styling Button Scan */
     .stButton { display: flex; justify-content: center; }
     .stButton > button { 
         background: linear-gradient(90deg, #f97316 0%, #ea580c 100%) !important; 
@@ -98,14 +104,13 @@ st.markdown("""
     .val-v { font-size: 17px; font-weight: 800; color: #ffffff; }
     .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
 
-    /* Center Tabs */
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 10px; border: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MASTER DATA & SUMBER DATA (Nama Najmi Hidayati sudah dikoreksi)
+# 3. MASTER DATA
 MASTER_DATA = {
-    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
+    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hiyati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
 }
 
@@ -115,13 +120,12 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 ENTRY_ID = "960346359"
 
-# 4. JAM REALTIME & RUNNING TEXT
+# 4. JAM REALTIME & HEADER
 placeholder_header = st.empty()
 wita_now = datetime.now() + timedelta(hours=8)
 
-# 5. TATA LETAK CENTER (3 KOLOM)
+# 5. TATA LETAK CENTER
 col_l, col_m, col_r = st.columns([1, 1.2, 1])
-
 with col_m:
     tgl_pilihan = st.date_input("Tanggal", wita_now.date())
     if st.button("🔍 SCAN DATA SEKARANG"):
@@ -156,7 +160,6 @@ def render_list(df, master, form_url):
     for i, p in enumerate(sorted(master), 1):
         nama_p = p.strip()
         d = log.get(nama_p, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
-        
         if d["k"] == "BELUM ABSEN":
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
             elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
@@ -182,19 +185,21 @@ def render_list(df, master, form_url):
 
 # 7. TABS
 tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1:
-    render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
-with tab2:
-    render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
+with tab1: render_list(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
+with tab2: render_list(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
 
-# 8. LOGIKA JAM REALTIME & AUTO UPDATE HIDDEN (1 MENIT)
+# 8. LOGIKA JAM & REFRESH 60 DETIK
 while True:
     wita_tick = datetime.now() + timedelta(hours=8)
     placeholder_header.markdown(f"""
         <div class="header-jam">
             <div class="clock-text">{wita_tick.strftime("%H:%M:%S")}</div>
             <div class="running-text-container">
-                <div class="running-text">ABSENSI KPU Kabupaten Hulu Sungai Selatan &nbsp; • &nbsp; ABSENSI KPU Kabupaten Hulu Sungai Selatan &nbsp; • &nbsp; ABSENSI KPU Kabupaten Hulu Sungai Selatan</div>
+                <div class="running-text">
+                    ABSENSI KPU Kabupaten Hulu Sungai Selatan &nbsp; • &nbsp; 
+                    <span class="highlight">Silahkan Cek Kehadiran hari ini yaa, yang belum absen bisa klik di bagian Nama masing-masing</span> &nbsp; • &nbsp; 
+                    ABSENSI KPU Kabupaten Hulu Sungai Selatan
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
