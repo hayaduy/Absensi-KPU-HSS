@@ -9,30 +9,30 @@ from io import StringIO
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS: STICKY HEADER & CLEAN LAYOUT
+# 2. CSS: INJEKSI STICKY HEADER & CLEAN UI
 st.markdown("""
     <style>
     /* Dasar & Background */
     .stApp { background-color: #1a0505; color: #ffffff; }
     
-    /* Container Utama */
-    .block-container { padding-top: 0rem; max-width: 1200px !important; margin: 0 auto; }
+    /* MEKANISME STICKY HEADER (FIX SCROLL) */
+    header[data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    
+    .block-container { padding-top: 0rem !important; max-width: 1200px !important; margin: 0 auto; }
 
-    /* --- STICKY HEADER SECTION --- */
-    .sticky-wrapper {
-        position: -webkit-sticky;
+    /* Sticky Container */
+    [data-testid="stVerticalBlock"] > div:first-child {
         position: sticky;
         top: 0;
         background-color: #1a0505;
         z-index: 999;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding-bottom: 15px;
         border-bottom: 2px solid #7f1d1d;
     }
 
     .header-jam { text-align: center; }
     .clock-text { 
-        font-size: clamp(40px, 10vw, 85px); 
+        font-size: clamp(45px, 10vw, 85px); 
         font-weight: 900; color: #ffffff; 
         text-shadow: 0 0 20px rgba(249, 115, 22, 0.5); 
         font-family: 'Courier New', Courier, monospace;
@@ -47,24 +47,15 @@ st.markdown("""
     .highlight { color: #facc15; font-weight: 800; }
     @keyframes scroll-left { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     
-    /* Input Tanggal agar tetap proporsional di Sticky Header */
+    /* Input Tanggal Center */
     div[data-testid="stDateInput"] {
-        width: 100% !important;
-        max-width: 300px !important;
-        margin: 5px auto !important;
-        background: rgba(45, 10, 10, 0.9);
-        border: 2px solid #f97316;
-        border-radius: 12px;
-        padding: 5px;
+        width: 100% !important; max-width: 300px !important; margin: 5px auto !important;
+        background: rgba(45, 10, 10, 0.9); border: 2px solid #f97316; border-radius: 12px; padding: 5px;
     }
     div[data-testid="stDateInput"] label { display: none; }
-    div[data-testid="stDateInput"] input { 
-        color: #ffffff !important; text-align: center !important;
-        background-color: transparent !important; border: none !important;
-        font-size: 18px !important; font-weight: bold !important;
-    }
+    div[data-testid="stDateInput"] input { color: #ffffff !important; text-align: center !important; background: transparent !important; border: none !important; font-size: 18px !important; font-weight: bold !important; }
 
-    /* --- CONTENT SECTION --- */
+    /* ROW PEGAWAI */
     .row-container {
         display: flex; flex-direction: column; 
         background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
@@ -83,7 +74,7 @@ st.markdown("""
         border: 1px solid rgba(249, 115, 22, 0.15); border-radius: 10px; 
         display: inline-block; width: 100%; max-width: 350px; 
     }
-    .name-box a { color: #fecaca !important; text-decoration: none !important; font-size: 16px; font-weight: 700; }
+    .name-box a { color: #fecaca !important; text-decoration: none !important; font-size: 17px; font-weight: 700; }
 
     .col-data-wrap { 
         width: 100%; display: flex; justify-content: space-around; 
@@ -92,16 +83,26 @@ st.markdown("""
     .val-v { font-size: clamp(15px, 4vw, 18px); font-weight: 800; color: #ffffff; }
     .label-k { font-size: 9px; color: #fca5a5; text-transform: uppercase; margin-bottom: 3px; }
     
-    /* Tabs styling */
-    .stTabs { margin-top: 10px; }
     .stTabs [data-baseweb="tab-list"] { justify-content: center !important; }
     </style>
     """, unsafe_allow_html=True)
 
 # 3. MASTER DATA
-MASTER_PNS = ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hiyati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."]
-MASTER_PPPK = ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
-MASTER_ALL = MASTER_PNS + MASTER_PPPK
+MASTER_PNS = [
+    "Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", 
+    "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", 
+    "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", 
+    "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", 
+    "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", 
+    "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."
+]
+MASTER_PPPK = [
+    "Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", 
+    "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", 
+    "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", 
+    "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"
+]
+MASTER_ALL_HIERARCHY = MASTER_PNS + MASTER_PPPK
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
@@ -109,24 +110,14 @@ FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 ENTRY_ID = "960346359"
 
-# 4. JAM & STICKY HEADER AREA
-header_placeholder = st.empty()
+# 4. JAM & HEADER STICKY
+header_area = st.empty()
 wita_now = datetime.now() + timedelta(hours=8)
 
-# Menggunakan div sticky-wrapper untuk membungkus Jam dan Tanggal
-# Catatan: Di Streamlit, kita perlu menyisipkan CSS sticky ini via markdown secara strategis
-with st.container():
-    st.markdown('<div class="sticky-wrapper">', unsafe_allow_html=True)
-    
-    # Placeholder untuk Jam (akan diupdate oleh loop di bawah)
-    clock_area = st.empty()
-    
-    # Input Tanggal (berada di dalam sticky wrapper)
-    col_l, col_m, col_r = st.columns([1, 1.2, 1])
-    with col_m:
-        tgl_pilihan = st.date_input("Tanggal", wita_now.date(), key="sticky_date")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+# Input Tanggal (Bagian dari Vertical Block pertama yang di-sticky via CSS)
+col_l, col_m, col_r = st.columns([1, 1.2, 1])
+with col_m:
+    tgl_pilihan = st.date_input("Tanggal", wita_now.date())
 
 # 5. ENGINE FUNGSI
 def fetch_raw(url):
@@ -141,38 +132,47 @@ def process_log(df, tgl):
         for _, r in df.iterrows():
             ts = r.iloc[0]
             if ts.strftime('%d/%m/%Y') == target:
-                nama = str(r.iloc[1]).strip()
+                # Normalisasi Nama untuk menghindari error Najmi/Athaya
+                nama = str(r.iloc[1]).strip().replace("  ", " ")
                 if nama not in log:
                     log[nama] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if ts.hour < 9 else "TERLAMBAT"}
                 if ts.hour >= 15: log[nama]["p"] = ts.strftime("%H:%M")
     return log
 
-def render_list(log, master, is_all=False):
-    items = []
-    for idx, p in enumerate(master):
-        nama = p.strip(); d = log.get(nama, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
+def render_list(log, master_order, sort_priority=False):
+    list_to_show = []
+    for idx, p in enumerate(master_order):
+        nama_p = p.strip().replace("  ", " ")
+        d = log.get(nama_p, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
+        
         if d["k"] == "BELUM ABSEN":
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
             elif wita_now.hour >= 16: d["k"] = "LAPOR KASUBBAG"
             elif wita_now.hour >= 9: d["k"] = "TERLAMBAT"
-        w = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
-        items.append({"n": nama, "d": d, "w": w, "h": idx})
+            
+        weight = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
+        list_to_show.append({"nama": nama_p, "data": d, "w": weight, "h": idx})
 
-    if is_all: items = sorted(items, key=lambda x: (x['w'], x['h']))
+    if sort_priority:
+        list_to_show = sorted(list_to_show, key=lambda x: (x['w'], x['h']))
+    else:
+        list_to_show = sorted(list_to_show, key=lambda x: x['h'])
 
-    for i, it in enumerate(items, 1):
-        n = it["n"]; d = it["d"]; cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
+    for item in list_to_show:
+        n = item["nama"]; d = item["data"]
+        clr = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"]=="TERLAMBAT" else "#f87171"
         f = FORM_PNS if n in MASTER_PNS else FORM_PPPK
         link = f"{f}?entry.{ENTRY_ID}={n.replace(' ', '+')}&submit=Submit"
+        
         st.markdown(f"""
             <div class="row-container">
                 <div class="col-nama">
-                    <div class="name-box"><a href="{link}" target="_blank">{i}. {n.split(',')[0]}</a></div>
+                    <div class="name-box"><a href="{link}" target="_blank">{n.split(',')[0]}</a></div>
                 </div>
                 <div class="col-data-wrap">
                     <div><div class="label-k">Pagi</div><div class="val-v">{d['m']}</div></div>
                     <div><div class="label-k">Sore</div><div class="val-v">{d['p']}</div></div>
-                    <div><div class="label-k">Ket</div><div style="color:{cl}; font-weight:900;">{d['k']}</div></div>
+                    <div><div class="label-k">Ket</div><div style="color:{clr}; font-weight:900;">{d['k']}</div></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -180,22 +180,22 @@ def render_list(log, master, is_all=False):
 # 6. TAMPILAN TAB
 log_pns = process_log(fetch_raw(URL_PNS), tgl_pilihan)
 log_pppk = process_log(fetch_raw(URL_PPPK), tgl_pilihan)
-log_all = {**log_pns, **log_pppk}
+combined_log = {**log_pns, **log_pppk}
 
-t_a, t_p, t_k = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
-with t_a: render_list(log_all, MASTER_ALL, is_all=True)
-with t_p: render_list(log_pns, MASTER_PNS)
-with t_k: render_list(log_pppk, MASTER_PPPK)
+tab_a, tab_p, tab_k = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
+with tab_a: render_list(combined_log, MASTER_ALL_HIERARCHY, sort_priority=True)
+with tab_p: render_list(log_pns, MASTER_PNS)
+with tab_k: render_list(log_pppk, MASTER_PPPK)
 
 # 7. UPDATE CLOCK REALTIME
 while True:
     now = datetime.now() + timedelta(hours=8)
-    clock_area.markdown(f"""
+    header_area.markdown(f"""
         <div class="header-jam">
             <div class="clock-text">{now.strftime("%H:%M:%S")}</div>
             <div class="running-text-container">
                 <div class="running-text">
-                    KPU HSS &nbsp; • &nbsp; <span class="highlight">Silahkan Cek Kehadiran hari ini yaa, Klik Nama masing-masing untuk Absen</span> &nbsp; • &nbsp; KPU HSS
+                    ABSENSI KPU HSS &nbsp; • &nbsp; <span class="highlight">Silahkan Cek Kehadiran hari ini yaa, Klik Nama masing-masing untuk Absen</span> &nbsp; • &nbsp; ABSENSI KPU HSS
                 </div>
             </div>
         </div>
