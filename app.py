@@ -74,10 +74,10 @@ st.markdown("""
         max-width: 1100px; margin-left: auto; margin-right: auto;
     }
     
-    /* Styling Nama: Sangat Soft & Elegant */
+    /* Styling Nama: Soft & Elegant */
     .col-nama { flex: 4; }
     .name-box {
-        background: rgba(249, 115, 22, 0.08); /* Tipis banget bang */
+        background: rgba(249, 115, 22, 0.08); 
         padding: 8px 18px;
         border: 1px solid rgba(249, 115, 22, 0.15);
         border-radius: 10px;
@@ -85,7 +85,7 @@ st.markdown("""
         min-width: 280px;
     }
     .name-box a { 
-        color: #fca5a5 !important; /* Warna merah muda pudar */
+        color: #fca5a5 !important; 
         text-decoration: none !important; 
         font-size: 17px; font-weight: 600; 
     }
@@ -103,9 +103,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MASTER DATA & SUMBER DATA
+# 3. MASTER DATA & SUMBER DATA (Nama Najmi Hidayati sudah dikoreksi)
 MASTER_DATA = {
-    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hiyati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
+    "PNS": ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."],
     "PPPK": ["Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"]
 }
 
@@ -199,7 +199,6 @@ while True:
         </div>
     """, unsafe_allow_html=True)
     
-    # Auto Update otomatis setiap menit ke-0 (1 menit sekali)
     if wita_tick.second == 0:
         st.rerun()
         
