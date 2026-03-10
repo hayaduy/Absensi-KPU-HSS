@@ -8,58 +8,60 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS MAGIC: VERTICAL VS HORIZONTAL SHIELD ---
+# --- CSS MAGIC: FIX VERTICAL & ZEBRA ---
 st.markdown("""
     <style>
-    /* Reset container */
-    .block-container { padding: 1rem 1rem !important; }
+    .block-container { padding: 1rem !important; }
     
-    /* Font adaptif */
-    html, body, [class*="css"]  {
-        font-size: calc(12px + 0.3vw);
-    }
-
-    /* Judul & Jam Center */
+    /* Jam & Judul */
     .centered-text { text-align: center; }
     .big-clock {
         text-align: center;
         color: #3498db;
         font-weight: bold;
         font-size: calc(30px + 3vw);
-        margin-top: -10px;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
 
-    /* Tombol Cek Absen Center */
-    div.stButton > button {
-        width: 100% !important;
-        max-width: 350px;
-        height: 50px !important;
-        font-weight: bold !important;
-        margin: 0 auto;
-        display: block;
-        border-radius: 12px;
-    }
-
-    /* Tabs Center */
-    .stTabs [data-baseweb="tab-list"] { justify-content: center; gap: 20px; }
-
-    /* Fix Layout Kolom agar tidak tumpuk saat Vertikal */
+    /* Paksa kolom tetap sejajar kesamping di HP (Anti-Melorot) */
     [data-testid="column"] {
         min-width: 0px !important;
-        word-wrap: break-word;
+        flex-basis: auto !important;
+    }
+    
+    div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
     }
 
-    /* Optimasi Tabel untuk HP Tegak */
+    /* Zebra Stripes */
+    .zebra-row {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 5px;
+        padding: 5px 0px;
+    }
+
+    /* Tombol Cek Absen Utama */
+    div.stButton > button:first-child {
+        width: 250px !important;
+        margin: 0 auto;
+        display: block;
+        background-color: #d35400;
+        border-radius: 10px;
+    }
+
+    /* Tombol ABSEN di Tabel */
+    .small-absen-btn button {
+        padding: 2px 10px !important;
+        font-size: 12px !important;
+        height: 30px !important;
+        width: 100% !important;
+    }
+
     @media (max-width: 600px) {
         .stMarkdown div { font-size: 11px !important; }
-        .stTabs [data-baseweb="tab"] { font-size: 14px !important; }
-        /* Tombol Ceklis di HP dibuat lebih kecil */
-        div[data-testid="stVerticalBlock"] div.stButton > button {
-            height: 35px !important;
-            width: 40px !important;
-            font-size: 12px !important;
-        }
+        .big-clock { font-size: 40px !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -81,8 +83,8 @@ st.markdown("<h3 class='centered-text'>📊 MONITORING ABSENSI KPU HSS</h3>", un
 st.markdown(f"<div class='big-clock'>{wita_now.strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
 # --- KONTROL ---
-c_gap1, c_mid, c_gap2 = st.columns([1, 6, 1])
-with c_mid:
+c_l, c_m, c_r = st.columns([1, 4, 1])
+with c_m:
     tgl_pilihan = st.date_input("Tgl", wita_now.date(), label_visibility="collapsed")
     if st.button("🔍 CEK ABSEN"): st.rerun()
 
@@ -113,24 +115,34 @@ def draw_rows(df, master, form_url):
             elif jam >= t_pulang: log[nama]["p"] = jam.strftime("%H:%M")
 
     st.divider()
-    # Porsi kolom yang dioptimalkan untuk Vertikal: Nama ambil 50% layar
-    c1, c2, c3, c4, c5, c6 = st.columns([0.4, 4, 1.1, 1.1, 2.2, 1])
-    c1.write("**#**"); c2.write("**NAMA**"); c3.write("**M**"); c4.write("**P**"); c5.write("**STAT**"); c6.write("**OK**")
+    # Header Tabel
+    h1, h2, h3, h4, h5, h6 = st.columns([0.5, 3.5, 1, 1, 1.5, 1.5])
+    h1.write("**#**"); h2.write("**NAMA**"); h3.write("**M**"); h4.write("**P**"); h5.write("**ST**"); h6.write("**AKSI**")
     
     for i, p in enumerate(sorted(master), 1):
-        d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "❌ ALPA"})
-        r1, r2, r3, r4, r5, r6 = st.columns([0.4, 4, 1.1, 1.1, 2.2, 1])
+        d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "❌"})
+        # Aplikasi Zebra Stripe pada baris genap
+        row_class = "zebra-row" if i % 2 == 0 else ""
+        st.markdown(f"<div class='{row_class}'>", unsafe_allow_html=True)
+        
+        r1, r2, r3, r4, r5, r6 = st.columns([0.5, 3.5, 1, 1, 1.5, 1.5])
         r1.write(str(i))
         r2.write(f"**{p}**")
         r3.write(d["m"])
         r4.write(d["p"])
+        
         color = "green" if "HADIR" in d["k"] else "orange" if "TERLAMBAT" in d["k"] else "red"
-        # Status disingkat kalau ALPA biar hemat ruang
-        st_label = d['k'].replace("TERLAMBAT", "TLAT") if len(p) > 20 else d['k']
-        r5.markdown(f":{color}[{st_label}]")
-        if r6.button("✔", key=f"v_{p}_{i}"):
-            requests.post(form_url, data={"entry.960346359": p})
-            st.toast(f"✅ {p} OK!"); time.sleep(0.5); st.rerun()
+        st_text = "HDR" if "HADIR" in d["k"] else "TLT" if "TERLAMBAT" in d["k"] else "ALPA"
+        r5.markdown(f":{color}[**{st_text}**]")
+        
+        with r6:
+            st.markdown("<div class='small-absen-btn'>", unsafe_allow_html=True)
+            if st.button("ABSEN", key=f"v_{p}_{i}"):
+                requests.post(form_url, data={"entry.960346359": p})
+                st.toast(f"✅ {p} Sukses!")
+                time.sleep(0.5); st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # --- TABS ---
 tab1, tab2 = st.tabs(["👥 PNS", "👥 PPPK"])
