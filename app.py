@@ -8,17 +8,17 @@ from io import StringIO
 
 st.set_page_config(page_title="Absensi KPU HSS", layout="wide")
 
-# --- CSS TOTAL REPAIR ---
+# --- CSS SEDERHANA TAPI AMPUH ---
 st.markdown("""
     <style>
-    /* Meratakan Header ke Tengah */
+    /* Meratakan judul dan jam ke tengah */
     .stApp h1, .stApp h2, .stApp h3 { text-align: center !important; }
     
     /* Tombol Cek Absen di Tengah */
     div.stButton > button:first-child {
         background-color: #d35400 !important;
         color: white !important;
-        width: 220px !important;
+        width: 200px !important;
         height: 50px !important;
         font-weight: bold !important;
         border-radius: 12px !important;
@@ -26,31 +26,16 @@ st.markdown("""
         display: block !important;
     }
 
-    /* Memperbesar Tab Jenis Pegawai */
-    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 20px; }
-    .stTabs [data-baseweb="tab"] { font-size: 18px !important; font-weight: bold !important; }
+    /* Mengatur jarak tabel agar tidak rapat ke samping di Laptop */
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
 
-    /* CSS Tabel: Anti-Melorot & Scroll ke Samping */
-    .table-container {
-        width: 100%;
-        overflow-x: auto; /* Aktifkan scroll kanan-kiri di HP */
-        margin-top: 20px;
-    }
-    .absen-table {
-        width: 100%;
-        min-width: 500px; /* Paksa lebar minimal agar kolom tidak tumpuk */
-        border-collapse: collapse;
-        font-size: 14px;
-    }
-    .absen-table th { background-color: #2c3e50; color: white; padding: 12px 8px; text-align: left; }
-    .absen-table td { padding: 10px 8px; border-bottom: 1px solid #444; }
-    .absen-table tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.05); }
-    
-    /* Tombol Absen di Bawah */
-    .action-btn button {
-        width: 100% !important;
-        font-size: 12px !important;
-        padding: 5px !important;
+    /* Membuat baris zebra secara manual di Streamlit */
+    div[data-testid="stVerticalBlock"] > div:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.03);
+        border-radius: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -68,10 +53,10 @@ FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTN
 
 # --- HEADER & JAM ---
 wita_now = datetime.now() + timedelta(hours=8)
-st.markdown("<h3>📊 MONITORING ABSENSI KPU HSS</h3>", unsafe_allow_html=True)
-st.markdown(f"<h1 style='text-align: center; color: #3498db; font-size: 55px; margin-top: -15px;'>{wita_now.strftime('%H:%M:%S')}</h1>", unsafe_allow_html=True)
+st.write(f"### 📊 MONITORING ABSENSI KPU HSS")
+st.markdown(f"<h1 style='text-align: center; color: #3498db;'>{wita_now.strftime('%H:%M:%S')}</h1>", unsafe_allow_html=True)
 
-# --- KONTROL TENGAH ---
+# --- KONTROL ---
 c1, c2, c3 = st.columns([1, 2, 1])
 with c2:
     tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
@@ -88,7 +73,7 @@ def fetch_data(url):
         return df
     except: return pd.DataFrame()
 
-def display_absen(df, master, form_url):
+def draw_ui(df, master, form_url):
     t_limit = datetime.strptime("09:00", "%H:%M").time()
     t_pulang = datetime.strptime("16:00", "%H:%M").time()
     log = {}
@@ -106,45 +91,38 @@ def display_absen(df, master, form_url):
             elif jam >= t_pulang:
                 log[nama]["p"] = jam.strftime("%H:%M")
 
-    # BANGUN TABEL HTML (PENTING: Gunakan div overflow)
-    html_code = f"""
-    <div class='table-container'>
-        <table class='absen-table'>
-            <thead>
-                <tr><th>#</th><th>NAMA PEGAWAI</th><th>MASUK</th><th>PULANG</th><th>STATUS</th></tr>
-            </thead>
-            <tbody>
-    """
+    st.divider()
+    # Header Kolom dengan proporsi baru agar Nama lebih lebar dan Jam tidak melorot
+    h1, h2, h3, h4, h5 = st.columns([0.4, 4, 1.2, 1.2, 2])
+    h1.write("**#**"); h2.write("**NAMA**"); h3.write("**M**"); h4.write("**P**"); h5.write("**STAT**")
     
     for i, p in enumerate(sorted(master), 1):
         d = log.get(p.strip(), {"m": "--:--", "p": "--:--", "k": "❌"})
-        color = "#2ecc71" if "HADIR" in d["k"] else "#e67e22" if "TERLAMBAT" in d["k"] else "#e74c3c"
-        st_label = "HDR" if "HADIR" in d["k"] else "TLT" if "TERLAMBAT" in d["k"] else "ALPA"
         
-        html_code += f"""
-            <tr>
-                <td>{i}</td>
-                <td><b>{p}</b></td>
-                <td>{d['m']}</td>
-                <td>{d['p']}</td>
-                <td style='color: {color}; font-weight: bold;'>{st_label}</td>
-            </tr>
-        """
-    html_code += "</tbody></table></div>"
-    st.markdown(html_code, unsafe_allow_html=True)
-    
-    # Bagian Tombol Absen di Bawah
-    st.markdown("<br><b>KLIK NAMA UNTUK ABSEN:</b>", unsafe_allow_html=True)
+        # Container baris
+        with st.container():
+            r1, r2, r3, r4, r5 = st.columns([0.4, 4, 1.2, 1.2, 2])
+            r1.write(str(i))
+            r2.write(f"**{p}**")
+            r3.write(d["m"])
+            r4.write(d["p"])
+            color = "green" if "HADIR" in d["k"] else "orange" if "TERLAMBAT" in d["k"] else "red"
+            st_label = "HDR" if "HADIR" in d["k"] else "TLT" if "TERLAMBAT" in d["k"] else "ALPA"
+            r5.markdown(f":{color}[**{st_label}**]")
+
+    # Bagian Tombol Absen dibuat terpisah agar tidak merusak tabel
+    st.write("---")
+    st.write("**Daftar Pegawai (Klik untuk Absen):**")
     cols = st.columns(2)
     for i, p in enumerate(sorted(master)):
         with cols[i % 2]:
-            nama_panggil = p.split(',')[0]
-            if st.button(f"👉 {nama_panggil}", key=f"btn_{p}_{i}"):
+            nama_tombol = p.split(',')[0] # Nama panggilan saja biar muat di HP
+            if st.button(f"Absen: {nama_tombol}", key=f"btn_{p}_{i}", use_container_width=True):
                 requests.post(form_url, data={"entry.960346359": p})
                 st.toast(f"✅ {p} Sukses!")
                 time.sleep(0.5)
                 st.rerun()
 
-tab1, tab2 = st.tabs(["👥 PEGAWAI PNS", "👥 PEGAWAI PPPK"])
-with tab1: display_absen(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
-with tab2: display_absen(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
+tab1, tab2 = st.tabs(["👥 PNS", "👥 PPPK"])
+with tab1: draw_ui(fetch_data(URL_PNS), MASTER_DATA["PNS"], FORM_PNS)
+with tab2: draw_ui(fetch_data(URL_PPPK), MASTER_DATA["PPPK"], FORM_PPPK)
