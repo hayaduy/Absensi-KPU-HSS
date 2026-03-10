@@ -25,7 +25,7 @@ st.markdown("""
     .badge { padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; margin-top: 10px; display: block; }
     
     .status-hadir { background: #059669; }
-    .status-telat { background: #d97706; }
+    .status-terlambat { background: #d97706; }
     .status-lapor { background: #7c3aed; }
     .status-alpa { background: #dc2626; }
     .status-belum { background: #475569; }
@@ -43,9 +43,9 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 # 3. SIDEBAR
 with st.sidebar:
     st.title("📌 MENU")
-    nav = st.radio("Navigasi", ["🏠 Dashboard", "📊 Laporan"])
+    nav = st.radio("Navigasi", ["🏠 Dashboard", "📊 Laporan Bulanan", "📅 Detail Harian (Sorting)"])
     st.divider()
-    tgl = st.date_input("Pilih Tanggal", datetime.now() + timedelta(hours=8))
+    tgl_sidebar = st.date_input("Pilih Tanggal", datetime.now() + timedelta(hours=8))
     refresh = st.toggle("Auto Refresh (30s)", value=True)
     if st.button("🚀 PAKSA UPDATE DATA"): st.rerun()
 
@@ -68,15 +68,15 @@ wita = datetime.now() + timedelta(hours=8)
 # 5. HEADER
 st.markdown(f'<div class="hero"><div class="clock">{wita.strftime("%H:%M:%S")}</div><div style="color:#94a3b8">{wita.strftime("%A, %d %B %Y")}</div></div>', unsafe_allow_html=True)
 
+# --- DASHBOARD MODE ---
 if nav == "🏠 Dashboard":
     kat = st.radio("Kategori", ["PNS", "PPPK"], horizontal=True)
     target_master = MASTER[kat]
     target_df = df_pns if kat == "PNS" else df_pppk
     
-    # Matching Data
     status_db = {}
     if not target_df.empty:
-        df_today = target_df[target_df.iloc[:, 0].dt.date == tgl]
+        df_today = target_df[target_df.iloc[:, 0].dt.date == tgl_sidebar]
         for _, r in df_today.iterrows():
             nm, ts = str(r.iloc[1]).strip(), r.iloc[0]
             if nm not in status_db:
@@ -84,46 +84,79 @@ if nav == "🏠 Dashboard":
                 status_db[nm] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": stts}
             elif ts.hour >= 16: status_db[nm]["p"] = ts.strftime("%H:%M")
 
-    # Render Grid
     grid_html = '<div class="card-container">'
     for nm in sorted(target_master):
         d = status_db.get(nm.strip(), {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
         
-        # Logika Status
         if d["k"] == "BELUM ABSEN":
-            if tgl < wita.date(): d["k"] = "ALPA"
+            if tgl_sidebar < wita.date(): d["k"] = "ALPA"
             elif wita.hour >= 16: d["k"] = "LAPOR KASUBBAG"
             elif wita.hour >= 9: d["k"] = "TERLAMBAT"
         
-        cls = "status-" + d["k"].lower().split()[0]
+        # Mapping class CSS
+        cls_key = d["k"].lower().split()[0]
         grid_html += f"""
         <div class="card">
             <div class="name">{nm.split(',')[0]}</div>
             <div style="font-size:10px; color:#94a3b8">Masuk</div><div class="time-val">{d['m']}</div>
             <div style="font-size:10px; color:#94a3b8">Pulang</div><div class="time-val">{d['p']}</div>
-            <div class="badge {cls}">{d['k']}</div>
+            <div class="badge status-{cls_key}">{d['k']}</div>
         </div>
         """
     grid_html += '</div>'
     st.markdown(grid_html, unsafe_allow_html=True)
 
-else:
-    st.header("📊 Laporan Bulanan")
-    col1, col2 = st.columns(2)
+# --- LAPORAN BULANAN (REKAP) ---
+elif nav == "📊 Laporan Bulanan":
+    st.subheader("Rekap Kehadiran Bulanan")
+    col1, col2, col3 = st.columns([1, 1, 2])
     bulan = col1.selectbox("Bulan", range(1, 13), index=wita.month-1)
     tahun = col2.selectbox("Tahun", [2024, 2025, 2026], index=2)
+    sort_opt = col3.selectbox("Urutkan Berdasarkan", ["Total Terbanyak", "Nama (A-Z)"])
     
     full_df = pd.concat([df_pns, df_pppk])
     if not full_df.empty:
         df_m = full_df[(full_df.iloc[:, 0].dt.month == bulan) & (full_df.iloc[:, 0].dt.year == tahun)]
         rkp = []
-        for _, l_nm in MASTER.items():
+        for kat, l_nm in MASTER.items():
             for n in l_nm:
                 dp = df_m[df_m.iloc[:, 1].str.strip() == n.strip()]
                 h = dp[dp.iloc[:, 0].dt.hour < 9].iloc[:, 0].dt.date.nunique()
                 tl = dp[dp.iloc[:, 0].dt.hour >= 9].iloc[:, 0].dt.date.nunique()
-                rkp.append({"Nama": n, "Hadir Tepat": h, "Terlambat": tl, "Total": h+tl})
-        st.dataframe(pd.DataFrame(rkp).sort_values(by="Total", ascending=False), use_container_width=True, hide_index=True)
+                rkp.append({"Nama": n, "Kategori": kat, "Hadir Tepat": h, "Terlambat": tl, "Total": h+tl})
+        
+        res_df = pd.DataFrame(rkp)
+        
+        # Logika Sorting
+        if sort_opt == "Total Terbanyak":
+            res_df = res_df.sort_values(by="Total", ascending=False)
+        else:
+            res_df = res_df.sort_values(by="Nama", ascending=True)
+            
+        st.dataframe(res_df, use_container_width=True, hide_index=True)
+
+# --- DETAIL HARIAN (SORTING BY NAME & DATE) ---
+elif nav == "📅 Detail Harian (Sorting)":
+    st.subheader("Data Mentah Absensi (Sorting Nama & Tanggal)")
+    
+    full_df = pd.concat([df_pns, df_pppk])
+    if not full_df.empty:
+        # Menyesuaikan nama kolom agar lebih enak dibaca
+        clean_df = full_df.copy()
+        clean_df.columns = ['Timestamp', 'Nama', 'Keterangan', 'Lokasi'] # Sesuaikan dengan urutan kolom sheet Anda
+        
+        # Widget Sorting
+        c1, c2 = st.columns(2)
+        sort_col = c1.selectbox("Urutkan Kolom", ["Timestamp", "Nama"])
+        sort_order = c2.radio("Order", ["Terbaru/Z-A", "Terlama/A-Z"], horizontal=True)
+        
+        ascending = True if sort_order == "Terlama/A-Z" else False
+        
+        # Eksekusi Sorting
+        sorted_df = clean_df.sort_values(by=sort_col, ascending=ascending)
+        
+        # Tampilkan
+        st.dataframe(sorted_df, use_container_width=True, hide_index=True)
 
 # 6. REFRESH
 if refresh:
