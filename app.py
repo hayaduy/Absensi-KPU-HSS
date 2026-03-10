@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import random
 from io import StringIO
@@ -19,12 +19,16 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
 
+# --- LOGIKA ZONA WAKTU WITA (GMT+8) ---
+wita_now = datetime.now() + timedelta(hours=8)
+
 st.markdown("<h1 style='text-align: center;'>📊 MONITORING ABSENSI KPU HSS</h1>", unsafe_allow_html=True)
-st.markdown(f"<h3 style='text-align: center; color: #3498db;'>🕒 {datetime.now().strftime('%H:%M:%S')}</h3>", unsafe_allow_html=True)
+st.markdown(f"<h3 style='text-align: center; color: #3498db;'>🕒 Jam Digital (WITA): {wita_now.strftime('%H:%M:%S')}</h3>", unsafe_allow_html=True)
 
 col_tgl, col_btn = st.columns([2, 1])
 with col_tgl:
-    tgl_pilihan = st.date_input("📅 Pilih Tanggal Scan/Absen", datetime.now())
+    # Default tanggal mengikuti WITA
+    tgl_pilihan = st.date_input("📅 Pilih Tanggal Scan/Absen", wita_now.date())
 with col_btn:
     if st.button("🔍 SCAN DATA SEKARANG", use_container_width=True):
         st.rerun()
@@ -34,8 +38,8 @@ def fetch_data(url):
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         df = pd.read_csv(StringIO(res.text))
         df.columns = df.columns.str.strip()
-        # Paksa konversi semua kolom yang mungkin berisi tanggal
-        for col in df.columns[:2]: # Cek kolom 1 dan 2
+        # Cari kolom timestamp secara otomatis
+        for col in df.columns[:2]:
             df[col] = pd.to_datetime(df[col], dayfirst=True, errors='ignore')
         return df
     except: return pd.DataFrame()
@@ -46,17 +50,15 @@ def draw_ui(df, master, form_url):
     log = {}
     
     if not df.empty:
-        # Identifikasi kolom waktu dan nama
-        # Cari kolom yang formatnya datetime
         df_clean = df.copy()
         time_col = df_clean.columns[0]
         name_col = df_clean.columns[1]
 
-        # Konversi kolom waktu secara aman
+        # Konversi waktu dengan penanganan error
         df_clean[time_col] = pd.to_datetime(df_clean[time_col], errors='coerce')
         df_clean = df_clean.dropna(subset=[time_col])
 
-        # Filter tanggal
+        # Filter berdasarkan tanggal pilihan user
         df_day = df_clean[df_clean[time_col].dt.date == tgl_pilihan]
         
         for _, r in df_day.iterrows():
@@ -67,7 +69,7 @@ def draw_ui(df, master, form_url):
             elif jam >= t_pulang:
                 log[nama]["p"] = jam.strftime("%H:%M")
 
-    # Header Tabel
+    # Layout Tabel
     c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 1, 1, 1.5, 1])
     c1.write("**NO**"); c2.write("**NAMA PEGAWAI**"); c3.write("**MASUK**"); c4.write("**PULANG**"); c5.write("**STATUS**"); c6.write("**AKSI**")
     st.divider()
@@ -79,6 +81,7 @@ def draw_ui(df, master, form_url):
         color = "green" if "HADIR" in d["k"] else "orange" if "TERLAMBAT" in d["k"] else "red"
         r5.markdown(f":{color}[{d['k']}]")
         if r6.button("ABSEN", key=f"btn_{p}_{i}"):
+            # Kirim nama ke Google Form
             requests.post(form_url, data={"entry.960346359": p})
             st.toast(f"✅ Absen {p} Sukses!"); time.sleep(1); st.rerun()
 
