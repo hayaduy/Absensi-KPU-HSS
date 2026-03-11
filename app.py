@@ -138,7 +138,7 @@ def process_log(df, tgl):
             if ts.strftime('%d/%m/%Y') == target:
                 nama = str(r.iloc[1]).strip()
                 if nama not in log:
-                    log[nama] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if ts.hour < 9 else "TERLAMBAT"}
+                    log[nama] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if ts.hour < 9 else "LUPA ABSEN"}
                 if ts.hour >= 15: log[nama]["p"] = ts.strftime("%H:%M")
     return log
 
@@ -155,16 +155,16 @@ def render_list(log, master, is_all=False):
                 # Logika khusus Kasubbag & Sekretaris
                 d["k"] = "LAPOR SEKRETARIS" if nama in PIMPINAN else "LAPOR KASUBBAG"
             elif wita_now.hour >= 9:
-                d["k"] = "TERLAMBAT"
+                d["k"] = "LUPA ABSEN"
         
-        w = 1 if d["k"] in ["HADIR", "TERLAMBAT"] and d["m"] != "--:--" else 0
+        w = 1 if d["k"] in ["HADIR", "LUPA ABSEN"] and d["m"] != "--:--" else 0
         items.append({"n": nama, "d": d, "w": w, "h": idx})
 
     if is_all: 
         items = sorted(items, key=lambda x: (x['w'], x['h']))
 
     for it in items:
-        n = it["n"]; d = it["d"]; cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"] in ["TERLAMBAT", "LAPOR KASUBBAG", "LAPOR SEKRETARIS"] else "#f87171"
+        n = it["n"]; d = it["d"]; cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"] in ["LUPA ABSEN", "LAPOR KASUBBAG", "LAPOR SEKRETARIS"] else "#f87171"
         f = FORM_PNS if n in MASTER_PNS else FORM_PPPK
         link = f"{f}?entry.{ENTRY_ID}={n.replace(' ', '+')}&submit=Submit"
         
