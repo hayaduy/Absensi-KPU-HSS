@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import re
 from datetime import datetime, timedelta
 import time
 import random
@@ -10,9 +11,9 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 1. KONFIGURASI HALAMAN
-st.set_page_config(page_title="Monitoring Absensi KPU HSS", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI
+# 2. DATABASE PEGAWAI (LENGKAP)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -50,40 +51,60 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. STYLE CSS (MODERN & CENTERED)
+# 3. CSS MODERN (GLASSMORPHISM & ELEGANT TABS)
 st.markdown("""
     <style>
-    .stApp { background-color: #0c0202; color: #ffffff; }
+    /* Background & Font */
+    .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
     
-    /* Center Clock & Date */
-    .centered-container { text-align: center; margin-bottom: 30px; }
-    .clock-text { font-size: 75px; font-weight: 900; color: #ffffff; text-shadow: 0 0 30px #f97316; }
-    .date-text { font-size: 22px; color: #fca5a5; font-weight: bold; margin-top: -10px; }
+    /* Center Clock & Date Section */
+    .header-box { text-align: center; padding: 40px 0 20px 0; }
+    .clock-text { font-size: 85px; font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.6); line-height: 1; }
+    .date-text { font-size: 24px; color: #f97316; font-weight: 500; margin-top: 5px; letter-spacing: 2px; }
     
-    /* Buttons Style */
+    /* Buttons Elegant Style */
     div.stButton > button {
-        background-color: rgba(249, 115, 22, 0.1) !important; color: #ffedd5 !important;
-        border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
-        text-align: left !important; padding-left: 20px !important; height: 58px !important; border-radius: 14px !important;
+        background: rgba(255, 255, 255, 0.03) !important; color: #fecaca !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+        font-weight: 600 !important; text-align: left !important; 
+        padding-left: 20px !important; height: 62px !important; 
+        border-radius: 16px !important; transition: all 0.3s ease !important;
     }
-    div.stButton > button:hover { background-color: rgba(249, 115, 22, 0.4) !important; border: 1px solid #f97316 !important; }
-    
-    /* Label & Values */
-    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
-    .val-v { font-size: 19px; font-weight: 800; color: #ffffff; }
-    
-    /* Running Text Style */
-    .marquee {
-        width: 100%; overflow: hidden; white-space: nowrap;
-        background: rgba(249, 115, 22, 0.1); padding: 10px 0;
-        border-top: 1px solid rgba(249, 115, 22, 0.3); position: fixed; bottom: 0; left: 0; z-index: 999;
+    div.stButton > button:hover { 
+        background: rgba(249, 115, 22, 0.15) !important; 
+        border: 1px solid #f97316 !important; 
+        color: white !important; transform: translateY(-2px);
     }
-    .marquee p { display: inline-block; padding-left: 100%; animation: marquee 25s linear infinite; font-weight: bold; color: #fca5a5; margin: 0; }
-    @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+    
+    /* Labels & Values */
+    .label-k { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .val-v { font-size: 20px; font-weight: 700; color: #f8fafc; }
+    
+    /* Success Badge */
+    .status-hadir { color: #4ade80; font-weight: 900; }
+    .status-lupa { color: #fb923c; font-weight: 900; }
+    .status-belum { color: #f87171; font-weight: 900; }
+
+    /* Elegant Running Text */
+    .marquee-container {
+        position: fixed; bottom: 0; left: 0; width: 100%;
+        background: rgba(15, 2, 2, 0.9); backdrop-filter: blur(10px);
+        padding: 12px 0; border-top: 1px solid rgba(249, 115, 22, 0.2); z-index: 1000;
+    }
+    .marquee-text {
+        display: inline-block; white-space: nowrap; animation: scroll 30s linear infinite;
+        font-size: 14px; font-weight: 600; color: #fca5a5;
+    }
+    @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] { gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .stTabs [data-baseweb="tab"] { background: none; border: none; font-weight: bold; color: #64748b; }
+    .stTabs [aria-selected="true"] { color: #f97316 !important; border-bottom: 2px solid #f97316 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. FUNGSI CORE
+# 4. FUNGSI CORE (TIDAK BERUBAH)
 def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
 
@@ -107,16 +128,16 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. HEADER (CENTERED CLOCK & DATE)
+# 5. UI HEADER (CENTERED)
 wita_now = get_wita()
 st.markdown(f"""
-    <div class="centered-container">
+    <div class="header-box">
         <div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>
-        <div class="date-text">{wita_now.strftime("%A, %d %B %Y")}</div>
+        <div class="date-text">{wita_now.strftime("%A, %d %B %Y").upper()}</div>
     </div>
 """, unsafe_allow_html=True)
 
-# Filter Tanggal (Hidden but Functional)
+# Filter (Hidden)
 tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
@@ -127,7 +148,8 @@ log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_r
 def render_list(log, master_list):
     for idx, n in enumerate(master_list):
         d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
-        cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if "LUPA" in d["k"] else "#f87171"
+        cl_class = "status-hadir" if d["k"]=="HADIR" else "status-lupa" if "LUPA" in d["k"] else "status-belum"
+        
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
             nama_tombol = n.split(',')[0]
@@ -142,28 +164,33 @@ def render_list(log, master_list):
                     f"submit=Submit"
                 )
                 st.markdown(f"""
-                    <div style="background: rgba(249,115,22,0.15); padding: 15px; border-radius: 12px; border: 1px solid #f97316; margin-bottom: 10px; text-align: center;">
-                        <p style="margin:0; font-size: 14px; color: #fca5a5;">Konfirmasi Absensi:</p>
-                        <p style="margin:5px 0 15px 0; font-weight: bold; font-size: 16px;">{n}</p>
-                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: #f97316; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold;">
-                            KLIK KIRIM KE GOOGLE ✅
+                    <div style="background: rgba(249,115,22,0.1); padding: 18px; border-radius: 16px; border: 1px dashed #f97316; margin: 10px 0; text-align: center;">
+                        <p style="margin:0; font-size: 12px; color: #94a3b8;">KONFIRMASI ABSEN UNTUK:</p>
+                        <p style="margin:4px 0 15px 0; font-weight: 800; font-size: 16px; color: #fff;">{n}</p>
+                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: #f97316; color: white; text-align: center; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 20px rgba(249,115,22,0.3);">
+                            TAP UNTUK KIRIM KE GOOGLE ✅
                         </a>
                     </div>
                 """, unsafe_allow_html=True)
 
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
-        with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
-        st.markdown("<hr style='margin:5px 0; opacity:0.1'>", unsafe_allow_html=True)
+        with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div class='{cl_class}'>{d['k']}</div></div>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:8px 0; border:0; border-top: 1px solid rgba(255,255,255,0.05)'>", unsafe_allow_html=True)
 
-t1, t2, t3 = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
+# 6. TABS SECTION
+st.markdown("<br>", unsafe_allow_html=True)
+t1, t2, t3 = st.tabs(["🌎 SEMUA PEGAWAI", "👥 PNS", "👥 PPPK"])
 with t1: render_list(log_all, list(DATABASE_INFO.keys()))
 with t2: render_list(log_all, MASTER_PNS)
 with t3: render_list(log_all, MASTER_PPPK)
 
-# 6. RUNNING TEXT (FOOTER)
+# 7. FOOTER RUNNING TEXT (ORIGINAL TULISAN)
 st.markdown(f"""
-    <div class="marquee">
-        <p>🔴 MONITORING ABSENSI SEKRETARIAT KPU KABUPATEN HULU SUNGAI SELATAN --- SEMANGAT BEKERJA UNTUK NEGERI --- HARI INI: {wita_now.strftime("%d %B %Y")} --- JANGAN LUPA ABSEN PAGI DAN SORE!</p>
+    <div class="marquee-container">
+        <div class="marquee-text">
+            🔴 MONITORING ABSENSI SEKRETARIAT KPU KABUPATEN HULU SUNGAI SELATAN --- JANGAN LUPA ABSEN PAGI DAN SORE --- TETAP SEMANGAT BEKERJA UNTUK NEGERI --- DATA TER-UPDATE SECARA OTOMATIS --- JAM WITA: {wita_now.strftime("%H:%M")} --- HARI INI: {wita_now.strftime("%d %B %Y")}
+        </div>
     </div>
+    <br><br><br>
 """, unsafe_allow_html=True)
