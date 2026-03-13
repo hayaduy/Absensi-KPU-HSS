@@ -13,10 +13,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (HASIL SCAN EXCEL TERBARU & SYNC FORM)
-# Catatan: Jabatan disesuaikan dengan teks pilihan yang ada di Google Form
+# 2. DATABASE PEGAWAI (31 ORANG - SINKRONISASI TOTAL)
 DATABASE_INFO = {
-    # --- PNS (17 Orang) ---
+    # --- PNS (17 Orang) - Sesuai Foto Pilihan Kalimat ---
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris KPU"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kasubbag TP-Hupmas"],
     "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kasubbag Keuangan, Umum dan Logistik"],
@@ -35,27 +34,27 @@ DATABASE_INFO = {
     "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
 
-    # --- PPPK (14 Orang) ---
-    "Sya'bani Rona Baika": ["199202072024212044", "Penata Kelola Sistem Dan Teknologi Informasi"],
-    "Apriadi Rakhman": ["198904222024211013", "Penata Kelola Sistem Dan Teknologi Informasi"],
-    "M Satria Maipadly": ["198905262024211016", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Basuki Rahmat": ["197705222024211007", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Sulaiman": ["198411222024211010", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Saldoz Yedi": ["198008112025211019", "Operator Layanan Operasional"],
-    "Mastoni Ridani": ["199106012025211018", "Operator Layanan Operasional"],
-    "Suriadi": ["199803022025211005", "Pengelola Umum Operasional"],
-    "Ami Aspihani": ["198204042025211031", "Operator Layanan Operasional"],
-    "Abdurrahman": ["198810122025211031", "Operator Layanan Operasional"],
-    "Emaliani": ["198906222025212027", "Pengadministrasi Umum"],
-    "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Saiful Fahmi, S.Pd": ["199506172025211036", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Nadianti": ["199906062025212036", "Pengadministrasi Umum"]
+    # --- PPPK (14 Orang) - Sesuai Foto Pilihan KAPITAL ---
+    "Sya'bani Rona Baika": ["199202072024212044", "PRANATA KOMPUTER AHLI PERTAMA"],
+    "Apriadi Rakhman": ["198904222024211013", "PRANATA KOMPUTER AHLI PERTAMA"],
+    "M Satria Maipadly": ["198905262024211016", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Basuki Rahmat": ["197705222024211007", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Sulaiman": ["198411222024211010", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Saldoz Yedi": ["198008112025211019", "OPERATOR LAYANAN OPERASIONAL"],
+    "Mastoni Ridani": ["199106012025211018", "OPERATOR LAYANAN OPERASIONAL"],
+    "Suriadi": ["199803022025211005", "PENGELOLA UMUM OPERASIONAL"],
+    "Ami Aspihani": ["198204042025211031", "OPERATOR LAYANAN OPERASIONAL"],
+    "Abdurrahman": ["198810122025211031", "OPERATOR LAYANAN OPERASIONAL"],
+    "Emaliani": ["198906222025212027", "PENGADMINISTRASI PERKANTORAN"],
+    "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Saiful Fahmi, S.Pd": ["199506172025211036", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Nadianti": ["199906062025212036", "PENGADMINISTRASI PERKANTORAN"]
 }
 
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. STYLE CSS
+# 3. CSS LUXURY
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
@@ -146,5 +145,5 @@ with t1: render_list(log_all, list(DATABASE_INFO.keys()), "tab1")
 with t2: render_list(log_all, MASTER_PNS, "tab2")
 with t3: render_list(log_all, MASTER_PPPK, "tab3")
 
-# 9. FOOTER MARQUEE
+# 9. FOOTER
 st.markdown(f"""<div class="marquee-container"><div class="marquee-text">🔴 MONITORING ABSENSI SEKRETARIAT KPU KABUPATEN HULU SUNGAI SELATAN --- JANGAN LUPA ABSEN PAGI DAN SORE --- TETAP SEMANGAT BEKERJA UNTUK NEGERI --- DATA TER-UPDATE SECARA OTOMATIS --- JAM WITA: {wita_now.strftime("%H:%M")} --- HARI INI: {wita_now.strftime("%d %B %Y")}</div></div><br><br><br>""", unsafe_allow_html=True)
