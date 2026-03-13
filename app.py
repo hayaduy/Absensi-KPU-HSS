@@ -10,9 +10,9 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 1. KONFIGURASI HALAMAN
-st.set_page_config(page_title="Absensi KPU HSS", page_icon="👻", layout="wide")
+st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI
+# 2. DATABASE PEGAWAI (LENGKAP SESUAI DATA ANDA)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -50,11 +50,11 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. STYLE CSS
+# 3. STYLE CSS (DARK LUXURY)
 st.markdown("""
     <style>
     .stApp { background-color: #0c0202; color: #ffffff; }
-    .clock-text { font-size: clamp(40px, 10vw, 80px); font-weight: 900; text-align: center; color: #ffffff; text-shadow: 0 0 30px #f97316; margin-bottom: 20px; }
+    .clock-text { font-size: clamp(40px, 8vw, 70px); font-weight: 900; text-align: center; color: #ffffff; text-shadow: 0 0 30px #f97316; margin-bottom: 20px; }
     div.stButton > button {
         background-color: rgba(249, 115, 22, 0.1) !important; color: #ffedd5 !important;
         border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
@@ -93,7 +93,7 @@ def process_log(df, tgl):
 # 5. TAMPILAN UTAMA
 wita_now = get_wita()
 st.markdown(f'<div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
-tgl_pilihan = st.date_input("Pilih Tanggal", wita_now.date(), label_visibility="collapsed")
+tgl_pilihan = st.date_input("Tanggal", wita_now.date(), label_visibility="collapsed")
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
@@ -108,7 +108,7 @@ def render_list(log, master_list):
         with c1:
             nama_tombol = n.split(',')[0]
             if st.button(f"👤 {nama_tombol}", key=f"btn_{idx}_{n}", use_container_width=True):
-                # Rakit Link Sakti
+                # RAKIT LINK SAKTI
                 form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
                 info = DATABASE_INFO.get(n)
                 url_submit = (
@@ -118,15 +118,18 @@ def render_list(log, master_list):
                     f"entry.159009649={info[1].replace(' ', '+')}&"
                     f"submit=Submit"
                 )
-                
-                # JURUS PAMUNGKAS: Buka Link di Tab Baru (Browser yang ngirim, bukan server)
-                js = f"window.open('{url_submit}', '_blank').focus();"
-                st.markdown(f'<img src="javascript:void(0);" onerror="{js}">', unsafe_allow_html=True)
-                
-                st.toast(f"✅ Membuka Form untuk {nama_tombol}...", icon="🚀")
-                time.sleep(2)
-                st.rerun()
-                
+                # TAMPILKAN TOMBOL KONFIRMASI (ANTI-BLOKIR BROWSER)
+                st.markdown(f"""
+                    <div style="background: rgba(249,115,22,0.2); padding: 15px; border-radius: 10px; border: 1px solid #f97316; margin-bottom: 10px;">
+                        <p style="margin:0; font-size: 14px; color: #fca5a5;">Konfirmasi kehadiran untuk:</p>
+                        <p style="margin:5px 0 15px 0; font-weight: bold; font-size: 16px;">{n}</p>
+                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: #f97316; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(249,115,22,0.4);">
+                            KLIK UNTUK KIRIM ABSEN ✅
+                        </a>
+                        <p style="font-size: 11px; color: #999; margin-top: 10px; text-align: center;">(Tab baru akan terbuka sebentar)</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
