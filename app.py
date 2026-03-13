@@ -14,8 +14,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (SINKRON DENGAN PILIHAN GOOGLE FORM)
+# 2. DATABASE PEGAWAI (TOTAL 31 PEGAWAI: 17 PNS & 14 PPPK)
+# JABATAN DISESUAIKAN PERSIS DENGAN PILIHAN DI GOOGLE FORM
 DATABASE_INFO = {
+    # --- 17 PNS ---
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris KPU"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kasubbag TP-Hupmas"],
     "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kasubbag Keuangan, Umum dan Logistik"],
@@ -33,6 +35,8 @@ DATABASE_INFO = {
     "Alfian Ridhani, S.Kom": ["19950903202506 1 005", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    
+    # --- 14 PPPK ---
     "Sya'bani Rona Baika": ["199202072024212044", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Apriadi Rakhman": ["198904222024211013", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "M Satria Maipadly": ["198905262024211016", "Penata Kelola Pemilihan Umum Ahli Pertama"],
@@ -52,7 +56,7 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS (LUXURY EXECUTIVE STYLE)
+# 3. CSS LUXURY
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
@@ -80,7 +84,7 @@ st.markdown("""
         overflow: hidden;
     }
     .marquee-text {
-        display: inline-block; white-space: nowrap; animation: scroll 38s linear infinite;
+        display: inline-block; white-space: nowrap; animation: scroll 40s linear infinite;
         font-size: 15px; font-weight: 600; color: #fca5a5;
     }
     @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
@@ -111,7 +115,7 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. HEADER
+# 5. UI HEADER
 wita_now = get_wita()
 st.markdown(f"""
     <div class="header-box">
@@ -127,13 +131,12 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. FUNGSI POP-UP (MODAL) DENGAN URL ENCODING & JABATAN SYNC
+# 6. POP-UP DENGAN DATA VALID
 @st.dialog("Konfirmasi Kehadiran")
 def show_confirm_modal(n):
     form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
     info = DATABASE_INFO.get(n)
     
-    # URL Encoding sempurna
     nama_enc = urllib.parse.quote_plus(n)
     nip_enc = urllib.parse.quote_plus(info[0])
     jab_enc = urllib.parse.quote_plus(info[1])
@@ -150,7 +153,7 @@ def show_confirm_modal(n):
     st.subheader(f"{n}")
     st.markdown(f"""
         <div style="background: rgba(249,115,22,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(249,115,22,0.3); margin-top: 10px;">
-            <p style="margin:0; font-size: 11px; color: #fca5a5;">JABATAN (AUTO-SELECT):</p>
+            <p style="margin:0; font-size: 11px; color: #fca5a5;">JABATAN (FIXED):</p>
             <p style="margin:5px 0 0 0; font-size: 14px; font-weight: bold;">{info[1]}</p>
         </div>
         <br>
@@ -170,7 +173,6 @@ def render_list(log, master_list, tab_id):
             nama_tombol = n.split(',')[0]
             if st.button(f"👤 {nama_tombol}", key=f"btn_{tab_id}_{idx}", use_container_width=True):
                 show_confirm_modal(n)
-
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div class='{cl_class}'>{d['k']}</div></div>", unsafe_allow_html=True)
@@ -178,7 +180,7 @@ def render_list(log, master_list, tab_id):
 
 # 8. TABS & FOOTER
 st.markdown("<br>", unsafe_allow_html=True)
-t1, t2, t3 = st.tabs(["🌎 SEMUA PEGAWAI", "👥 PNS", "👥 PPPK"])
+t1, t2, t3 = st.tabs(["🌎 SEMUA (31)", "👥 PNS (17)", "👥 PPPK (14)"])
 with t1: render_list(log_all, list(DATABASE_INFO.keys()), "tab1")
 with t2: render_list(log_all, MASTER_PNS, "tab2")
 with t3: render_list(log_all, MASTER_PPPK, "tab3")
