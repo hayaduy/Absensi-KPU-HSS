@@ -66,7 +66,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 4. FUNGSI CORE
+# 4. FUNGSI CORE (THE BYPASS ENGINE)
 def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
 
@@ -74,17 +74,25 @@ def kirim_absen_silent(nama, is_pns):
     target = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
     info = DATABASE_INFO.get(nama)
     
-    # Payload Lengkap (Nama, NIP, Jabatan) + Parameter Anti-Draft
+    # Payload dengan Bypass Draft & Force Jabatan
     payload = {
         "entry.960346359": nama,
         "entry.468881973": info[0],
         "entry.159009649": info[1],
-        "draftResponse": [],
-        "pageHistory": 0
+        "partialResponse": [None, None, [None, info[1]]],
+        "pageHistory": 0,
+        "continue": 1  # AUTO-CLICK PERBARUI
     }
-    headers = {"User-Agent": "Mozilla/5.0"}
+    
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Referer": target.replace("/formResponse", "/viewform")
+    }
+
     try:
         r = requests.post(target, data=payload, headers=headers, timeout=15)
+        # Status 200 berarti diterima oleh Google
         return r.status_code == 200
     except:
         return False
@@ -112,7 +120,6 @@ def process_log(df, tgl):
 # 5. TAMPILAN UTAMA
 wita_now = get_wita()
 st.markdown(f'<div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
-
 tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
@@ -128,14 +135,14 @@ def render_list(log, master_list):
         with c1:
             nama_singkat = n.split(',')[0]
             if st.button(f"👤 {nama_singkat}", key=f"btn_{idx}_{n}", use_container_width=True):
-                with st.spinner('Proses...'):
+                with st.spinner('Proses Bypass...'):
                     if kirim_absen_silent(n, n in MASTER_PNS):
                         st.toast(f"✅ Sukses: {nama_singkat}", icon="🚀")
                         st.cache_data.clear()
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("Gagal! Matikan 'Autosave' di Form.")
+                        st.error("Gagal! Coba Klik Manual Dulu di HP.")
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
