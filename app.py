@@ -12,7 +12,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="👻", layout="wide")
 
-# 2. DATABASE PEGAWAI (PRESISI SESUAI EXCEL)
+# 2. DATABASE PEGAWAI
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -50,49 +50,25 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. STYLE CSS (DARK LUXURY)
+# 3. STYLE CSS
 st.markdown("""
     <style>
-    .stApp { background-color: #0e0202; color: #ffffff; }
+    .stApp { background-color: #0c0202; color: #ffffff; }
     .clock-text { font-size: clamp(40px, 10vw, 80px); font-weight: 900; text-align: center; color: #ffffff; text-shadow: 0 0 30px #f97316; margin-bottom: 20px; }
     div.stButton > button {
         background-color: rgba(249, 115, 22, 0.1) !important; color: #ffedd5 !important;
         border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
         text-align: left !important; padding-left: 20px !important; height: 58px !important; border-radius: 14px !important;
     }
-    div.stButton > button:hover { background-color: rgba(249, 115, 22, 0.4) !important; border: 1px solid #f97316 !important; color: white !important; transform: scale(1.01); }
-    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; letter-spacing: 1px; }
+    div.stButton > button:hover { background-color: rgba(249, 115, 22, 0.4) !important; border: 1px solid #f97316 !important; color: white !important; }
+    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
     .val-v { font-size: 19px; font-weight: 800; color: #ffffff; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. FUNGSI CORE (METODE GET SAKTI)
+# 4. FUNGSI CORE
 def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
-
-def kirim_absen_silent(nama, is_pns):
-    form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if is_pns else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
-    info = DATABASE_INFO.get(nama)
-    
-    # Rakit link direct submit lewat parameter URL (GET)
-    # Cara ini seringkali lebih kebal terhadap proteksi bot
-    url_submit = (
-        f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
-        f"entry.960346359={nama.replace(' ', '+')}&"
-        f"entry.468881973={info[0].replace(' ', '+')}&"
-        f"entry.159009649={info[1].replace(' ', '+')}&"
-        f"submit=Submit"
-    )
-    
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0"}
-
-    try:
-        # Tembak lewat requests.get
-        r = requests.get(url_submit, headers=headers, timeout=15, verify=False)
-        # Google Form biasanya tetap memberi 200 walau data masuk
-        return r.status_code == 200
-    except:
-        return False
 
 @st.cache_data(ttl=15)
 def fetch_raw(url):
@@ -132,13 +108,25 @@ def render_list(log, master_list):
         with c1:
             nama_tombol = n.split(',')[0]
             if st.button(f"👤 {nama_tombol}", key=f"btn_{idx}_{n}", use_container_width=True):
-                with st.spinner('Menembus Google...'):
-                    if kirim_absen_silent(n, n in MASTER_PNS):
-                        st.toast(f"✅ Terkirim ke Form: {nama_tombol}", icon="🚀")
-                        st.cache_data.clear()
-                        time.sleep(2)
-                        st.rerun()
-                    else: st.error("Gagal! Google memblokir akses.")
+                # Rakit Link Sakti
+                form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
+                info = DATABASE_INFO.get(n)
+                url_submit = (
+                    f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
+                    f"entry.960346359={n.replace(' ', '+')}&"
+                    f"entry.468881973={info[0].replace(' ', '+')}&"
+                    f"entry.159009649={info[1].replace(' ', '+')}&"
+                    f"submit=Submit"
+                )
+                
+                # JURUS PAMUNGKAS: Buka Link di Tab Baru (Browser yang ngirim, bukan server)
+                js = f"window.open('{url_submit}', '_blank').focus();"
+                st.markdown(f'<img src="javascript:void(0);" onerror="{js}">', unsafe_allow_html=True)
+                
+                st.toast(f"✅ Membuka Form untuk {nama_tombol}...", icon="🚀")
+                time.sleep(2)
+                st.rerun()
+                
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
