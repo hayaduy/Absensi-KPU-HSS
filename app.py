@@ -7,13 +7,12 @@ import random
 from io import StringIO
 import urllib3
 
-# Biar log di Streamlit Cloud bersih
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", page_icon="👻", layout="wide")
 
-# 2. CSS CUSTOM: STYLE MEWAH & DARK
+# 2. CSS CUSTOM
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
@@ -28,7 +27,6 @@ st.markdown("""
     .running-text-container { width: 100%; overflow: hidden; margin-bottom: 30px; background: rgba(0,0,0,0.3); padding: 12px 0; border-radius: 12px; }
     .running-text { font-size: 15px; font-weight: 600; color: #ffffff; white-space: nowrap; animation: scroll-left 30s linear infinite; display: inline-block; }
     @keyframes scroll-left { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-    
     div.stButton > button {
         background-color: rgba(249, 115, 22, 0.15) !important;
         color: #fecaca !important;
@@ -36,69 +34,67 @@ st.markdown("""
         font-weight: bold !important;
         text-align: left !important;
         padding-left: 20px !important;
-        height: 55px !important;
+        height: 60px !important;
         border-radius: 15px !important;
-        transition: 0.3s !important;
     }
     div.stButton > button:hover {
         background-color: rgba(249, 115, 22, 0.4) !important;
         border: 1px solid #f97316 !important;
         color: white !important;
-        transform: scale(1.02);
     }
-    .label-k { font-size: 11px; color: #fca5a5; text-transform: uppercase; margin-bottom: 3px; }
+    .label-k { font-size: 11px; color: #fca5a5; text-transform: uppercase; }
     .val-v { font-size: 19px; font-weight: 800; color: #ffffff; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. KONFIGURASI DATA & WAKTU
+# 3. DATABASE NIP & JABATAN (PENTING!)
+# Kita butuh ini supaya pas klik Nama, sistem tau NIP & Jabatannya otomatis
+DATABASE_PEGAWAI = {
+    # FORMAT: "Nama Lengkap": ["NIP", "JABATAN"]
+    "Suwanto, SH., MH.": ["197103031993031005", "SEKRETARIS"],
+    "Wawan Setiawan, SH": ["198105252009041001", "KASUBBAG TEKNIS"],
+    "Ineke Setiyaningsih, S.Sos": ["197505242006042017", "KASUBBAG KEUANGAN"],
+    "Abdurrahman": ["198810122025211031", "OPERATOR LAYANAN OPERASIONAL"],
+    # Tambahkan pegawai lainnya di sini sesuai format di atas
+}
+
 def get_wita_now():
     return datetime.utcnow() + timedelta(hours=8)
 
-PIMPINAN = ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE"]
-MASTER_PNS = [
-    "Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", 
-    "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", 
-    "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", 
-    "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", 
-    "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", 
-    "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."
-]
-MASTER_PPPK = [
-    "Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", 
-    "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", 
-    "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", 
-    "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"
-]
-MASTER_ALL = MASTER_PNS + MASTER_PPPK
-
-# URL DATA (Tetap Sama)
+# URL DATA (Sheets)
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 
-# URL FORM (Pastikan diakhiri /formResponse)
+# FORM LINKS
 FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
 FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
-ENTRY_ID = "960346359"
 
-# 4. FUNGSI CORE
-@st.cache_data(ttl=30) # Refresh tiap 30 detik biar data Sheets update terus
+# 4. FUNGSI KIRIM (MULTIPLE DATA)
+def kirim_absen_silent(nama, is_pns):
+    target = FORM_PNS if is_pns else FORM_PPPK
+    
+    # Ambil NIP & Jabatan dari database kita di atas
+    info = DATABASE_PEGAWAI.get(nama, ["-", "STAF"])
+    
+    payload = {
+        "entry.960346359": nama,
+        "entry.468881973": info[0],
+        "entry.159009649": info[1]
+    }
+    
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        r = requests.post(target, data=payload, headers=headers, timeout=15)
+        return r.status_code == 200
+    except: return False
+
+# --- PROSES DATA SEPERTI BIASA ---
+@st.cache_data(ttl=30)
 def fetch_raw(url):
     try:
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
         return pd.read_csv(StringIO(res.text))
     except: return pd.DataFrame()
-
-def kirim_absen_silent(nama, is_pns):
-    target = FORM_PNS if is_pns else FORM_PPPK
-    # Payload harus berupa dict dengan ID entry yang benar
-    payload = {f"entry.{ENTRY_ID}": nama}
-    headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        # Kita pakai timeout lebih lama di Cloud
-        r = requests.post(target, data=payload, headers=headers, timeout=15)
-        return r.status_code == 200
-    except: return False
 
 def process_log(df, tgl_target):
     log = {}
@@ -115,39 +111,28 @@ def process_log(df, tgl_target):
                 if ts.hour >= 15: log[nama]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. RENDERER
-def render_list(log, master, tgl_pilihan, wita_now, is_all=False):
-    items = []
-    for idx, p in enumerate(master):
-        nama = p.strip()
+def render_list(log, master, tgl_pilihan, wita_now):
+    for idx, n in enumerate(master):
+        nama = n.strip()
         d = log.get(nama, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
+        
+        # Logika Keterangan
         if d["k"] == "BELUM ABSEN":
             if tgl_pilihan < wita_now.date(): d["k"] = "ALPA"
-            elif wita_now.hour >= 16: d["k"] = "LAPOR SEKRETARIS" if nama in PIMPINAN else "LAPOR KASUBBAG"
-            elif wita_now.hour >= 9: d["k"] = "LUPA ABSEN"
-        items.append({"n": nama, "d": d, "h": idx})
-
-    if is_all: 
-        # Tampilkan yang BELUM absen di paling atas
-        items = sorted(items, key=lambda x: (x['d']['m'] != "--:--", x['h']))
-
-    for it in items:
-        n = it["n"]; d = it["d"]
-        cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"] in ["LUPA ABSEN", "LAPOR KASUBBAG", "LAPOR SEKRETARIS"] else "#f87171"
+            elif wita_now.hour >= 16: d["k"] = "LAPOR"
+            elif wita_now.hour >= 9: d["k"] = "LUPA"
+        
+        cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if "LAPOR" in d["k"] or "LUPA" in d["k"] else "#f87171"
         
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
-            is_today = tgl_pilihan == wita_now.date()
-            if st.button(f"👤 {n.split(',')[0]}", key=f"btn_{n}_{it['h']}", use_container_width=True, disabled=not is_today):
-                with st.spinner('Mengirim...'):
-                    if kirim_absen_silent(n, n in MASTER_PNS):
-                        st.toast(f"✅ Berhasil! {n.split(',')[0]} sudah absen.", icon="🚀")
-                        st.cache_data.clear() # Paksa ambil data baru
-                        time.sleep(2)
-                        st.rerun()
-                    else: 
-                        st.error("Gagal! Cek Form / Jaringan Cloud.")
-
+            if st.button(f"👤 {nama.split(',')[0]}", key=f"btn_{idx}_{nama}"):
+                if kirim_absen_silent(nama, nama in MASTER_PNS):
+                    st.toast(f"✅ Berhasil Absen {nama}!", icon="🚀")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                else: st.error("Gagal! Cek Jaringan.")
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
@@ -155,33 +140,14 @@ def render_list(log, master, tgl_pilihan, wita_now, is_all=False):
 
 # 6. FLOW UTAMA
 wita_now = get_wita_now()
+st.markdown(f'<div class="header-jam"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div></div>', unsafe_allow_html=True)
 
-st.markdown(f"""
-    <div class="header-jam">
-        <div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>
-        <div class="running-text-container">
-            <div class="running-text">
-                MONITORING KPU KAB. HSS • KLIK NAMA UNTUK ABSEN • WITA: {wita_now.strftime("%d/%m/%Y")}
-            </div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
-col_l, col_m, col_r = st.columns([1, 1.2, 1])
-with col_m:
-    tgl_pilihan = st.date_input("Filter Tanggal", wita_now.date())
+MASTER_PNS = ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos"] # Sederhanakan list buat tes
+MASTER_PPPK = ["Abdurrahman"] 
 
-log_pns = process_log(fetch_raw(URL_PNS), tgl_pilihan)
-log_pppk = process_log(fetch_raw(URL_PPPK), tgl_pilihan)
-log_all = {**log_pns, **log_pppk}
+log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-t_a, t_p, t_k = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
-with t_a: render_list(log_all, MASTER_ALL, tgl_pilihan, wita_now, is_all=True)
-with t_p: render_list(log_pns, MASTER_PNS, tgl_pilihan, wita_now)
-with t_k: render_list(log_pppk, MASTER_PPPK, tgl_pilihan, wita_now)
-
-# Auto-refresh halus
-if 'refresh' not in st.session_state: st.session_state.refresh = time.time()
-if time.time() - st.session_state.refresh > 60:
-    st.session_state.refresh = time.time()
-    st.rerun()
+t1, t2 = st.tabs(["🌎 SEMUA", "👥 PNS"])
+with t1: render_list(log_all, MASTER_PNS + MASTER_PPPK, tgl_pilihan, wita_now)
