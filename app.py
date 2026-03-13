@@ -72,24 +72,39 @@ def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
 
 def kirim_absen_silent(nama, is_pns):
-    view_url = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/viewform" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/viewform"
-    post_url = view_url.replace("/viewform", "/formResponse")
+    # Gunakan link viewform untuk ambil FBZX, lalu tembak ke formResponse
+    base_url = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
     info = DATABASE_INFO.get(nama)
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0"}
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
     try:
         with requests.Session() as s:
-            res = s.get(view_url, headers=headers, timeout=10)
-            token = re.search(r'name="fbzx" value="([^"]+)"', res.text)
-            fbzx = token.group(1) if token else ""
+            # Step 1: Pemanasan & Ambil Token
+            r_get = s.get(f"{base_url}/viewform", headers=headers, timeout=10)
+            fbzx = re.search(r'name="fbzx" value="([^"]+)"', r_get.text).group(1) if "fbzx" in r_get.text else ""
+            
+            # Step 2: Kirim Data
             payload = {
                 "entry.960346359": nama,
                 "entry.468881973": info[0],
                 "entry.159009649": info[1],
-                "fvv": "1", "pageHistory": "0", "fbzx": fbzx, "draftResponse": "[]", "continue": "1"
+                "fvv": "1",
+                "pageHistory": "0",
+                "fbzx": fbzx,
+                "continue": "1"
             }
-            r = s.post(post_url, data=payload, headers=headers, timeout=15)
-            return r.status_code == 200 or "recorded" in r.text.lower()
-    except: return False
+            
+            r_post = s.post(f"{base_url}/formResponse", data=payload, headers=headers, timeout=15)
+            
+            # Berhasil jika ada kata kunci sukses dari Google
+            return r_post.status_code == 200 or "recorded" in r_post.text.lower() or "ditanggapi" in r_post.text.lower()
+    except Exception as e:
+        st.sidebar.error(f"Error: {e}")
+        return False
 
 @st.cache_data(ttl=30)
 def fetch_raw(url):
@@ -135,7 +150,7 @@ def render_list(log, master_list):
                         st.cache_data.clear()
                         time.sleep(1)
                         st.rerun()
-                    else: st.error("Gagal! Cek Gembok Form.")
+                    else: st.error("Gagal! Cek Log.")
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
