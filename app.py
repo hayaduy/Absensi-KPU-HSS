@@ -5,123 +5,96 @@ from datetime import datetime, timedelta
 import time
 import random
 from io import StringIO
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 1. KONFIGURASI HALAMAN
-st.set_page_config(page_title="Monitoring Absensi KPU HSS", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Absensi KPU HSS", page_icon="👻", layout="wide")
 
-# 2. CSS: CLEAN, MODERN & TRUE CENTER
+# 2. DATABASE PEGAWAI (PRESISI SESUAI EXCEL)
+DATABASE_INFO = {
+    "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
+    "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
+    "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kepala Sub Bagian Keuangan, Umum dan Logistik"],
+    "Farah Agustina Setiawati, SH": ["19840828 201012 2 003", "Kepala Sub. Bagian Hukum dan Sumber Daya Manusia"],
+    "Rusma Ariati, SE": ["19840621 201101 2 013", "Kepala Sub. Bagian Perencanaan Data dan Informasi"],
+    "Helmalina": ["19680318 199003 2 003", "Penelaah Teknis Kebijakan"],
+    "Ahmad Erwan Rifani, S.HI": ["19830829 200811 1 001", "Penelaah Teknis Kebijakan"],
+    "Syaiful Anwar": ["19741127 200710 1 001", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Zainal Hilmi Yustan": ["19821025 200701 1 003", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Najmi Hidayati": ["19850608 200701 2 003", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Jainal Abidin": ["19820712 200910 1 001", "Pengelola layanan operasional"],
+    "Suci Lestari, S.Ikom": ["19850108 201012 2 006", "Penelaah Teknis Kebijakan"],
+    "Athaya Insyira Khairani, S.H": ["20010712202506 2 017", "Penyusun Materi Hukum dan Perundang-Undangan"],
+    "Muhammad Ibnu Fahmi, S.H.": ["20010608202506 1 007", "Penyusun Materi Hukum dan Perundang-Undangan"],
+    "Alfian Ridhani, S.Kom": ["19950903202506 1 005", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Sya'bani Rona Baika": ["199202072024212044", "Ahli Pertama-Pranata Komputer"],
+    "Apriadi Rakhman": ["198904222024211013", "Ahli Pertama-Pranata Komputer"],
+    "M Satria Maipadly": ["198905262024211016", "Ahli Pertama-Penata Kelola Pemilu"],
+    "Basuki Rahmat": ["197705222024211007", "Penata Kelola Pemilihan Umum Ahli Pertama"],
+    "Sulaiman": ["198411222024211010", "Penata Kelola Pemilihan Umum Ahli Pertama"],
+    "Saldoz Yedi": ["198008112025211019", "Operator Layanan Operasional"],
+    "Mastoni Ridani": ["199106012025211018", "Operator Layanan Operasional"],
+    "Suriadi": ["199803022025211005", "Pengelola Umum Operasional"],
+    "Ami Aspihani": ["198204042025211031", "Operator Layanan Operasional"],
+    "Abdurrahman": ["198810122025211031", "Operator Layanan Operasional"],
+    "Emaliani": ["198906222025212027", "Pengadministrasi Perkantoran"],
+    "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Saiful Fahmi, S.Pd": ["199506172025211036", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Nadianti": ["199906062025212036", "PENGADMINISTRASI PERKANTORAN"]
+}
+
+MASTER_PNS = list(DATABASE_INFO.keys())[:17]
+MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
+
+# 3. STYLE CSS (DARK LUXURY)
 st.markdown("""
     <style>
-    /* Dasar & Background */
-    .stApp { background-color: #1a0505; color: #ffffff; }
-    
-    /* Container Utama */
-    .block-container { padding-top: 1rem; max-width: 1200px !important; margin: 0 auto; }
-
-    /* Header Jam Responsif */
-    .header-jam { text-align: center; padding: 10px 0; }
-    .clock-text { 
-        font-size: clamp(50px, 12vw, 95px); 
-        font-weight: 900; color: #ffffff; 
-        text-shadow: 0 0 25px rgba(249, 115, 22, 0.5); 
-        font-family: 'Courier New', Courier, monospace;
+    .stApp { background-color: #0e0202; color: #ffffff; }
+    .clock-text { font-size: clamp(40px, 10vw, 80px); font-weight: 900; text-align: center; color: #ffffff; text-shadow: 0 0 30px #f97316; margin-bottom: 20px; }
+    div.stButton > button {
+        background-color: rgba(249, 115, 22, 0.1) !important; color: #ffedd5 !important;
+        border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
+        text-align: left !important; padding-left: 20px !important; height: 58px !important; border-radius: 14px !important;
     }
-    
-    /* Running Text */
-    .running-text-container { width: 100%; overflow: hidden; margin-bottom: 30px; background: rgba(0,0,0,0.2); padding: 12px 0; border-radius: 10px; }
-    .running-text { font-size: clamp(13px, 3.5vw, 18px); font-weight: 600; color: #ffffff; white-space: nowrap; animation: scroll-left 30s linear infinite; display: inline-block; }
-    .highlight { color: #facc15; font-weight: 800; text-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
-    @keyframes scroll-left { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-    
-    /* Input Tanggal Center & Elegant */
-    div[data-testid="stDateInput"] {
-        width: 100% !important;
-        max-width: 350px !important;
-        margin: 0 auto !important;
-        background: rgba(45, 10, 10, 0.9);
-        border: 2px solid #f97316;
-        border-radius: 15px;
-        padding: 8px;
-        box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
-    }
-    div[data-testid="stDateInput"] label { display: none; }
-    div[data-testid="stDateInput"] input { 
-        color: #ffffff !important; text-align: center !important;
-        background-color: transparent !important; border: none !important;
-        font-size: 20px !important; font-weight: bold !important;
-    }
-
-    /* CARD LIST RESPONSIF */
-    .row-container {
-        display: flex; 
-        flex-direction: column; 
-        background: linear-gradient(90deg, #2d0a0a 0%, #4c0519 100%);
-        padding: 20px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #7f1d1d;
-    }
-    
-    @media (min-width: 768px) {
-        .row-container { flex-direction: row; align-items: center; justify-content: space-between; padding: 15px 30px; }
-        .col-nama { flex: 4; text-align: left; margin-bottom: 0; }
-        .col-data-wrap { flex: 6; border-top: none; border-left: 1px solid rgba(127, 29, 29, 0.5); padding-top: 0; padding-left: 20px; }
-    }
-
-    .col-nama { width: 100%; text-align: center; margin-bottom: 15px; }
-    .name-box { 
-        background: rgba(249, 115, 22, 0.08); 
-        padding: 10px 20px; border: 1px solid rgba(249, 115, 22, 0.15); 
-        border-radius: 12px; display: inline-block; width: 100%; max-width: 380px; 
-    }
-    .name-box a { color: #fecaca !important; text-decoration: none !important; font-size: 18px; font-weight: 700; }
-
-    .col-data-wrap { 
-        width: 100%; display: flex; justify-content: space-around; 
-        text-align: center; border-top: 1px solid rgba(127, 29, 29, 0.5); padding-top: 15px;
-    }
-    .val-v { font-size: clamp(16px, 4.5vw, 19px); font-weight: 800; color: #ffffff; }
-    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; margin-bottom: 5px; }
-    
-    .stTabs [data-baseweb="tab-list"] { justify-content: center !important; gap: 10px !important; }
+    div.stButton > button:hover { background-color: rgba(249, 115, 22, 0.4) !important; border: 1px solid #f97316 !important; color: white !important; transform: scale(1.01); }
+    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; letter-spacing: 1px; }
+    .val-v { font-size: 19px; font-weight: 800; color: #ffffff; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. DATA & HIRARKI
-# Menentukan siapa saja pimpinan untuk logika "LAPOR SEKRETARIS"
-PIMPINAN = ["Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", "Farah Agustina Setiawati, SH", "Rusma Ariati, SE"]
+# 4. FUNGSI CORE (METODE GET SAKTI)
+def get_wita():
+    return datetime.utcnow() + timedelta(hours=8)
 
-MASTER_PNS = [
-    "Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", 
-    "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", 
-    "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", 
-    "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", 
-    "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", 
-    "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."
-]
-MASTER_PPPK = [
-    "Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", 
-    "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", 
-    "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", 
-    "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"
-]
-MASTER_ALL = MASTER_PNS + MASTER_PPPK
+def kirim_absen_silent(nama, is_pns):
+    form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if is_pns else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
+    info = DATABASE_INFO.get(nama)
+    
+    # Rakit link direct submit lewat parameter URL (GET)
+    # Cara ini seringkali lebih kebal terhadap proteksi bot
+    url_submit = (
+        f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
+        f"entry.960346359={nama.replace(' ', '+')}&"
+        f"entry.468881973={info[0].replace(' ', '+')}&"
+        f"entry.159009649={info[1].replace(' ', '+')}&"
+        f"submit=Submit"
+    )
+    
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0"}
 
-URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
-URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
-FORM_PNS = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse"
-FORM_PPPK = "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
-ENTRY_ID = "960346359"
+    try:
+        # Tembak lewat requests.get
+        r = requests.get(url_submit, headers=headers, timeout=15, verify=False)
+        # Google Form biasanya tetap memberi 200 walau data masuk
+        return r.status_code == 200
+    except:
+        return False
 
-# 4. JAM REALTIME & HEADER
-header_placeholder = st.empty()
-wita_now = datetime.now() + timedelta(hours=8)
-
-# 5. INPUT TANGGAL
-col_l, col_m, col_r = st.columns([1, 1.2, 1])
-with col_m:
-    tgl_pilihan = st.date_input("Tanggal", wita_now.date())
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# 6. ENGINE PROSES
+@st.cache_data(ttl=15)
 def fetch_raw(url):
     try:
         res = requests.get(f"{url}&nc={random.random()}", timeout=10)
@@ -129,82 +102,49 @@ def fetch_raw(url):
     except: return pd.DataFrame()
 
 def process_log(df, tgl):
-    target = tgl.strftime('%d/%m/%Y'); log = {}
+    log = {}; target = tgl.strftime('%d/%m/%Y')
     if not df.empty:
         df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], dayfirst=True, errors='coerce')
         df = df.dropna(subset=[df.columns[0]]).sort_values(by=df.columns[0])
         for _, r in df.iterrows():
             ts = r.iloc[0]
             if ts.strftime('%d/%m/%Y') == target:
-                nama = str(r.iloc[1]).strip()
-                if nama not in log:
-                    log[nama] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if ts.hour < 9 else "LUPA ABSEN"}
-                if ts.hour >= 15: log[nama]["p"] = ts.strftime("%H:%M")
+                n = str(r.iloc[1]).strip()
+                if n not in log: log[n] = {"m": ts.strftime("%H:%M"), "p": "--:--", "k": "HADIR" if ts.hour < 9 else "LUPA ABSEN"}
+                if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-def render_list(log, master, is_all=False):
-    items = []
-    for idx, p in enumerate(master):
-        nama = p.strip(); d = log.get(nama, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
-        
-        # LOGIKA KETERANGAN
-        if d["k"] == "BELUM ABSEN":
-            if tgl_pilihan < wita_now.date(): 
-                d["k"] = "ALPA"
-            elif wita_now.hour >= 16:
-                # Logika khusus Kasubbag & Sekretaris
-                d["k"] = "LAPOR SEKRETARIS" if nama in PIMPINAN else "LAPOR KASUBBAG"
-            elif wita_now.hour >= 9:
-                d["k"] = "LUPA ABSEN"
-        
-        w = 1 if d["k"] in ["HADIR", "LUPA ABSEN"] and d["m"] != "--:--" else 0
-        items.append({"n": nama, "d": d, "w": w, "h": idx})
+# 5. TAMPILAN UTAMA
+wita_now = get_wita()
+st.markdown(f'<div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
+tgl_pilihan = st.date_input("Pilih Tanggal", wita_now.date(), label_visibility="collapsed")
 
-    if is_all: 
-        items = sorted(items, key=lambda x: (x['w'], x['h']))
+URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
+URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 
-    for it in items:
-        n = it["n"]; d = it["d"]; cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if d["k"] in ["LUPA ABSEN", "LAPOR KASUBBAG", "LAPOR SEKRETARIS"] else "#f87171"
-        f = FORM_PNS if n in MASTER_PNS else FORM_PPPK
-        link = f"{f}?entry.{ENTRY_ID}={n.replace(' ', '+')}&submit=Submit"
-        
-        st.markdown(f"""
-            <div class="row-container">
-                <div class="col-nama">
-                    <div class="name-box"><a href="{link}" target="_blank">{n.split(',')[0]}</a></div>
-                </div>
-                <div class="col-data-wrap">
-                    <div><div class="label-k">Pagi</div><div class="val-v">{d['m']}</div></div>
-                    <div><div class="label-k">Sore</div><div class="val-v">{d['p']}</div></div>
-                    <div><div class="label-k">Ket</div><div style="color:{cl}; font-weight:900;">{d['k']}</div></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 7. TAMPILAN TAB
-log_pns = process_log(fetch_raw(URL_PNS), tgl_pilihan)
-log_pppk = process_log(fetch_raw(URL_PPPK), tgl_pilihan)
-log_all = {**log_pns, **log_pppk}
+def render_list(log, master_list):
+    for idx, n in enumerate(master_list):
+        d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
+        cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if "LUPA" in d["k"] else "#f87171"
+        c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
+        with c1:
+            nama_tombol = n.split(',')[0]
+            if st.button(f"👤 {nama_tombol}", key=f"btn_{idx}_{n}", use_container_width=True):
+                with st.spinner('Menembus Google...'):
+                    if kirim_absen_silent(n, n in MASTER_PNS):
+                        st.toast(f"✅ Terkirim ke Form: {nama_tombol}", icon="🚀")
+                        st.cache_data.clear()
+                        time.sleep(2)
+                        st.rerun()
+                    else: st.error("Gagal! Google memblokir akses.")
+        with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
+        with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
+        with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:5px 0; opacity:0.1'>", unsafe_allow_html=True)
 
-t_a, t_p, t_k = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
-with t_a: render_list(log_all, MASTER_ALL, is_all=True)
-with t_p: render_list(log_pns, MASTER_PNS)
-with t_k: render_list(log_pppk, MASTER_PPPK)
-
-# 8. JAM & AUTO-REFRESH 1 MENIT
-while True:
-    now = datetime.now() + timedelta(hours=8)
-    header_placeholder.markdown(f"""
-        <div class="header-jam">
-            <div class="clock-text">{now.strftime("%H:%M:%S")}</div>
-            <div class="running-text-container">
-                <div class="running-text">
-                    ABSENSI KPU Kabupaten Hulu Sungai Selatan &nbsp; • &nbsp; 
-                    <span class="highlight">Silahkan Cek Kehadiran hari ini yaa, yang belum absen bisa klik di bagian Nama masing-masing</span> &nbsp; • &nbsp; 
-                    KPU Kabupaten Hulu Sungai Selatan
-                </div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    if now.second == 0: st.rerun()
-    time.sleep(1)
+t1, t2, t3 = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
+with t1: render_list(log_all, list(DATABASE_INFO.keys()))
+with t2: render_list(log_all, MASTER_PNS)
+with t3: render_list(log_all, MASTER_PPPK)
