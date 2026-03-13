@@ -13,7 +13,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (PRESISI 100%)
+# 2. DATABASE PEGAWAI (LENGKAP)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -51,22 +51,22 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS (GLASSMORPHISM & MARQUEE)
+# 3. CSS (LUXURY EXECUTIVE)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
     .header-box { text-align: center; padding: 40px 0 20px 0; }
-    .clock-text { font-size: clamp(50px, 9vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.6); line-height: 1; }
+    .clock-text { font-size: clamp(55px, 10vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.7); }
     .date-text { font-size: clamp(18px, 3vw, 24px); color: #f97316; font-weight: 500; margin-top: 5px; letter-spacing: 2px; }
     
     div.stButton > button {
-        background: rgba(255, 255, 255, 0.03) !important; color: #fecaca !important;
+        background: rgba(255, 255, 255, 0.03) !important; color: #f1f5f9 !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important; 
         font-weight: 600 !important; text-align: left !important; 
-        padding-left: 20px !important; height: 62px !important; 
-        border-radius: 16px !important;
+        padding-left: 20px !important; height: 64px !important; 
+        border-radius: 18px !important; transition: 0.3s;
     }
-    div.stButton > button:hover { background: rgba(249, 115, 22, 0.15) !important; border: 1px solid #f97316 !important; }
+    div.stButton > button:hover { background: rgba(249, 115, 22, 0.2) !important; border: 1px solid #f97316 !important; transform: translateX(5px); }
     
     .status-hadir { color: #4ade80; font-weight: 900; }
     .status-lupa { color: #fb923c; font-weight: 900; }
@@ -74,13 +74,12 @@ st.markdown("""
 
     .marquee-container {
         position: fixed; bottom: 0; left: 0; width: 100%;
-        background: rgba(15, 2, 2, 0.9); backdrop-filter: blur(10px);
-        padding: 12px 0; border-top: 1px solid rgba(249, 115, 22, 0.2); z-index: 1000;
-        overflow: hidden;
+        background: rgba(15, 2, 2, 0.95); backdrop-filter: blur(15px);
+        padding: 14px 0; border-top: 1px solid rgba(249, 115, 22, 0.3); z-index: 1000;
     }
     .marquee-text {
-        display: inline-block; white-space: nowrap; animation: scroll 40s linear infinite;
-        font-size: 15px; font-weight: 600; color: #fca5a5;
+        display: inline-block; white-space: nowrap; animation: scroll 38s linear infinite;
+        font-size: 16px; font-weight: 600; color: #fca5a5;
     }
     @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     </style>
@@ -110,7 +109,7 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. UI HEADER
+# 5. HEADER
 wita_now = get_wita()
 st.markdown(f"""
     <div class="header-box">
@@ -121,12 +120,35 @@ st.markdown(f"""
 
 tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
+# Kotak Konfirmasi (Muncul di paling atas jika tombol diklik)
+if "current_user" in st.session_state:
+    n = st.session_state.current_user
+    form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
+    info = DATABASE_INFO.get(n)
+    url_submit = (
+        f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
+        f"entry.960346359={n.replace(' ', '+')}&"
+        f"entry.468881973={info[0].replace(' ', '+')}&"
+        f"entry.159009649={info[1].replace(' ', '+')}&"
+        f"submit=Submit"
+    )
+    st.markdown(f"""
+        <div style="background: rgba(249,115,22,0.2); padding: 25px; border-radius: 20px; border: 2px solid #f97316; margin: 10px 0 30px 0; text-align: center; animation: pulse 2s infinite;">
+            <p style="margin:0; font-size: 14px; color: #fca5a5; letter-spacing: 1px;">KONFIRMASI TERAKHIR UNTUK:</p>
+            <p style="margin:8px 0 20px 0; font-weight: 800; font-size: 22px; color: #fff;">{n}</p>
+            <a href="{url_submit}" target="_blank" onclick="window.location.reload();" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 18px; box-shadow: 0 10px 25px rgba(249,115,22,0.5);">
+                TAP UNTUK SELESAI ✅
+            </a>
+        </div>
+        <style> @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }} 70% {{ box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }} }} </style>
+    """, unsafe_allow_html=True)
+
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. RENDER LIST (HYBRID ELEGANT)
+# 6. RENDER LIST
 def render_list(log, master_list, tab_id):
     for idx, n in enumerate(master_list):
         d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
@@ -136,25 +158,8 @@ def render_list(log, master_list, tab_id):
         with c1:
             nama_tombol = n.split(',')[0]
             if st.button(f"👤 {nama_tombol}", key=f"btn_{tab_id}_{idx}", use_container_width=True):
-                form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
-                info = DATABASE_INFO.get(n)
-                url_submit = (
-                    f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
-                    f"entry.960346359={n.replace(' ', '+')}&"
-                    f"entry.468881973={info[0].replace(' ', '+')}&"
-                    f"entry.159009649={info[1].replace(' ', '+')}&"
-                    f"submit=Submit"
-                )
-                st.markdown(f"""
-                    <div style="background: rgba(249,115,22,0.15); padding: 20px; border-radius: 15px; border: 1px solid #f97316; margin: 15px 0; text-align: center;">
-                        <p style="margin:0; font-size: 13px; color: #fca5a5; letter-spacing: 1px;">SIAP KIRIM ABSENSI:</p>
-                        <p style="margin:5px 0 18px 0; font-weight: 800; font-size: 18px; color: #ffffff;">{n}</p>
-                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px;">
-                            KLIK UNTUK KONFIRMASI ✅
-                        </a>
-                        <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">(Akan membuka tab baru sebentar untuk verifikasi Google)</p>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.session_state.current_user = n
+                st.rerun()
 
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
