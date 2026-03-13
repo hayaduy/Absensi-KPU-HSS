@@ -13,7 +13,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (LENGKAP)
+# 2. DATABASE PEGAWAI
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -51,60 +51,47 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS MODERN (GLASSMORPHISM & ELEGANT TABS)
+# 3. CSS (GLASSMORPHISM & MARQUEE)
 st.markdown("""
     <style>
-    /* Background & Font */
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
-    
-    /* Center Clock & Date Section */
     .header-box { text-align: center; padding: 40px 0 20px 0; }
     .clock-text { font-size: 85px; font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.6); line-height: 1; }
     .date-text { font-size: 24px; color: #f97316; font-weight: 500; margin-top: 5px; letter-spacing: 2px; }
     
-    /* Buttons Elegant Style */
     div.stButton > button {
         background: rgba(255, 255, 255, 0.03) !important; color: #fecaca !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important; 
         font-weight: 600 !important; text-align: left !important; 
         padding-left: 20px !important; height: 62px !important; 
-        border-radius: 16px !important; transition: all 0.3s ease !important;
+        border-radius: 16px !important;
     }
     div.stButton > button:hover { 
         background: rgba(249, 115, 22, 0.15) !important; 
-        border: 1px solid #f97316 !important; 
-        color: white !important; transform: translateY(-2px);
+        border: 1px solid #f97316 !important; color: white !important;
     }
     
-    /* Labels & Values */
-    .label-k { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    .label-k { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
     .val-v { font-size: 20px; font-weight: 700; color: #f8fafc; }
-    
-    /* Success Badge */
     .status-hadir { color: #4ade80; font-weight: 900; }
     .status-lupa { color: #fb923c; font-weight: 900; }
     .status-belum { color: #f87171; font-weight: 900; }
 
-    /* Elegant Running Text */
     .marquee-container {
         position: fixed; bottom: 0; left: 0; width: 100%;
         background: rgba(15, 2, 2, 0.9); backdrop-filter: blur(10px);
         padding: 12px 0; border-top: 1px solid rgba(249, 115, 22, 0.2); z-index: 1000;
+        overflow: hidden;
     }
     .marquee-text {
-        display: inline-block; white-space: nowrap; animation: scroll 30s linear infinite;
-        font-size: 14px; font-weight: 600; color: #fca5a5;
+        display: inline-block; white-space: nowrap; animation: scroll 35s linear infinite;
+        font-size: 15px; font-weight: 600; color: #fca5a5;
     }
     @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-    
-    /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] { gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .stTabs [data-baseweb="tab"] { background: none; border: none; font-weight: bold; color: #64748b; }
-    .stTabs [aria-selected="true"] { color: #f97316 !important; border-bottom: 2px solid #f97316 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. FUNGSI CORE (TIDAK BERUBAH)
+# 4. FUNGSI CORE
 def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
 
@@ -128,7 +115,7 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. UI HEADER (CENTERED)
+# 5. HEADER
 wita_now = get_wita()
 st.markdown(f"""
     <div class="header-box">
@@ -137,7 +124,6 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Filter (Hidden)
 tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
@@ -145,7 +131,8 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-def render_list(log, master_list):
+# Fungsi render dengan key unik (prefix) untuk mencegah DuplicateElementKey
+def render_list(log, master_list, tab_name):
     for idx, n in enumerate(master_list):
         d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
         cl_class = "status-hadir" if d["k"]=="HADIR" else "status-lupa" if "LUPA" in d["k"] else "status-belum"
@@ -153,7 +140,8 @@ def render_list(log, master_list):
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
             nama_tombol = n.split(',')[0]
-            if st.button(f"👤 {nama_tombol}", key=f"btn_{idx}_{n}", use_container_width=True):
+            # Key dibuat unik dengan menggabungkan nama tab + index + nama
+            if st.button(f"👤 {nama_tombol}", key=f"btn_{tab_name}_{idx}_{n}", use_container_width=True):
                 form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
                 info = DATABASE_INFO.get(n)
                 url_submit = (
@@ -165,9 +153,8 @@ def render_list(log, master_list):
                 )
                 st.markdown(f"""
                     <div style="background: rgba(249,115,22,0.1); padding: 18px; border-radius: 16px; border: 1px dashed #f97316; margin: 10px 0; text-align: center;">
-                        <p style="margin:0; font-size: 12px; color: #94a3b8;">KONFIRMASI ABSEN UNTUK:</p>
                         <p style="margin:4px 0 15px 0; font-weight: 800; font-size: 16px; color: #fff;">{n}</p>
-                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: #f97316; color: white; text-align: center; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 20px rgba(249,115,22,0.3);">
+                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: #f97316; color: white; text-align: center; padding: 14px; border-radius: 12px; font-weight: bold;">
                             TAP UNTUK KIRIM KE GOOGLE ✅
                         </a>
                     </div>
@@ -181,11 +168,11 @@ def render_list(log, master_list):
 # 6. TABS SECTION
 st.markdown("<br>", unsafe_allow_html=True)
 t1, t2, t3 = st.tabs(["🌎 SEMUA PEGAWAI", "👥 PNS", "👥 PPPK"])
-with t1: render_list(log_all, list(DATABASE_INFO.keys()))
-with t2: render_list(log_all, MASTER_PNS)
-with t3: render_list(log_all, MASTER_PPPK)
+with t1: render_list(log_all, list(DATABASE_INFO.keys()), "ALL")
+with t2: render_list(log_all, MASTER_PNS, "PNS")
+with t3: render_list(log_all, MASTER_PPPK, "PPPK")
 
-# 7. FOOTER RUNNING TEXT (ORIGINAL TULISAN)
+# 7. FOOTER RUNNING TEXT
 st.markdown(f"""
     <div class="marquee-container">
         <div class="marquee-text">
