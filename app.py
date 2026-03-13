@@ -14,45 +14,45 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (LENGKAP)
+# 2. DATABASE PEGAWAI (SINKRON DENGAN PILIHAN GOOGLE FORM)
 DATABASE_INFO = {
-    "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
-    "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
-    "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kepala Sub Bagian Keuangan, Umum dan Logistik"],
-    "Farah Agustina Setiawati, SH": ["19840828 201012 2 003", "Kepala Sub. Bagian Hukum dan Sumber Daya Manusia"],
-    "Rusma Ariati, SE": ["19840621 201101 2 013", "Kepala Sub. Bagian Perencanaan Data dan Informasi"],
+    "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris KPU"],
+    "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kasubbag TP-Hupmas"],
+    "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kasubbag Keuangan, Umum dan Logistik"],
+    "Farah Agustina Setiawati, SH": ["19840828 201012 2 003", "Kasubbag Hukum dan SDM"],
+    "Rusma Ariati, SE": ["19840621 201101 2 013", "Kasubbag Perencanaan, Data dan Informasi"],
     "Helmalina": ["19680318 199003 2 003", "Penelaah Teknis Kebijakan"],
     "Ahmad Erwan Rifani, S.HI": ["19830829 200811 1 001", "Penelaah Teknis Kebijakan"],
-    "Syaiful Anwar": ["19741127 200710 1 001", "Penata Kelola Sistem dan Teknologi Informasi"],
-    "Zainal Hilmi Yustan": ["19821025 200701 1 003", "Penata Kelola Sistem dan Teknologi Informasi"],
-    "Najmi Hidayati": ["19850608 200701 2 003", "Penata Kelola Sistem dan Teknologi Informasi"],
-    "Jainal Abidin": ["19820712 200910 1 001", "Pengelola layanan operasional"],
+    "Syaiful Anwar": ["19741127 200710 1 001", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Zainal Hilmi Yustan": ["19821025 200701 1 003", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Najmi Hidayati": ["19850608 200701 2 003", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Jainal Abidin": ["19820712 200910 1 001", "Pengelola Layanan Operasional"],
     "Suci Lestari, S.Ikom": ["19850108 201012 2 006", "Penelaah Teknis Kebijakan"],
-    "Athaya Insyira Khairani, S.H": ["20010712202506 2 017", "Penyusun Materi Hukum dan Perundang-Undangan"],
-    "Muhammad Ibnu Fahmi, S.H.": ["20010608202506 1 007", "Penyusun Materi Hukum dan Perundang-Undangan"],
-    "Alfian Ridhani, S.Kom": ["19950903202506 1 005", "Penata Kelola Sistem dan Teknologi Informasi"],
-    "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem dan Teknologi Informasi"],
-    "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem dan Teknologi Informasi"],
-    "Sya'bani Rona Baika": ["199202072024212044", "Ahli Pertama-Pranata Komputer"],
-    "Apriadi Rakhman": ["198904222024211013", "Ahli Pertama-Pranata Komputer"],
-    "M Satria Maipadly": ["198905262024211016", "Ahli Pertama-Penata Kelola Pemilu"],
+    "Athaya Insyira Khairani, S.H": ["20010712202506 2 017", "Penyusun Materi Hukum Dan Perundang- Undangan"],
+    "Muhammad Ibnu Fahmi, S.H.": ["20010608202506 1 007", "Penyusun Materi Hukum Dan Perundang- Undangan"],
+    "Alfian Ridhani, S.Kom": ["19950903202506 1 005", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Sya'bani Rona Baika": ["199202072024212044", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "Apriadi Rakhman": ["198904222024211013", "Penata Kelola Sistem Dan Teknologi Informasi"],
+    "M Satria Maipadly": ["198905262024211016", "Penata Kelola Pemilihan Umum Ahli Pertama"],
     "Basuki Rahmat": ["197705222024211007", "Penata Kelola Pemilihan Umum Ahli Pertama"],
     "Sulaiman": ["198411222024211010", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Saldoz Yedi": ["198008112025211019", "Operator Layanan Operasional"],
-    "Mastoni Ridani": ["199106012025211018", "Operator Layanan Operasional"],
-    "Suriadi": ["199803022025211005", "Pengelola Umum Operasional"],
-    "Ami Aspihani": ["198204042025211031", "Operator Layanan Operasional"],
-    "Abdurrahman": ["198810122025211031", "Operator Layanan Operasional"],
-    "Emaliani": ["198906222025212027", "Pengadministrasi Perkantoran"],
-    "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "PENATA KELOLA PEMILU AHLI PERTAMA"],
-    "Saiful Fahmi, S.Pd": ["199506172025211036", "PENATA KELOLA PEMILU AHLI PERTAMA"],
-    "Nadianti": ["199906062025212036", "PENGADMINISTRASI PERKANTORAN"]
+    "Saldoz Yedi": ["198008112025211019", "Pengelola Layanan Operasional"],
+    "Mastoni Ridani": ["199106012025211018", "Pengelola Layanan Operasional"],
+    "Suriadi": ["199803022025211005", "Pengelola Layanan Operasional"],
+    "Ami Aspihani": ["198204042025211031", "Pengelola Layanan Operasional"],
+    "Abdurrahman": ["198810122025211031", "Pengelola Layanan Operasional"],
+    "Emaliani": ["198906222025212027", "Pengadministrasi Umum"],
+    "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "Penata Kelola Pemilihan Umum Ahli Pertama"],
+    "Saiful Fahmi, S.Pd": ["199506172025211036", "Penata Kelola Pemilihan Umum Ahli Pertama"],
+    "Nadianti": ["199906062025212036", "Pengadministrasi Umum"]
 }
 
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS (LUXURY EXECUTIVE)
+# 3. CSS (LUXURY EXECUTIVE STYLE)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
@@ -65,7 +65,7 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1) !important; 
         font-weight: 600 !important; text-align: left !important; 
         padding-left: 20px !important; height: 64px !important; 
-        border-radius: 18px !important; transition: 0.3s;
+        border-radius: 18px !important;
     }
     div.stButton > button:hover { background: rgba(249, 115, 22, 0.2) !important; border: 1px solid #f97316 !important; }
     
@@ -81,7 +81,7 @@ st.markdown("""
     }
     .marquee-text {
         display: inline-block; white-space: nowrap; animation: scroll 38s linear infinite;
-        font-size: 16px; font-weight: 600; color: #fca5a5;
+        font-size: 15px; font-weight: 600; color: #fca5a5;
     }
     @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     </style>
@@ -127,13 +127,13 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. FUNGSI POP-UP (MODAL) DENGAN URL ENCODING KERAS
+# 6. FUNGSI POP-UP (MODAL) DENGAN URL ENCODING & JABATAN SYNC
 @st.dialog("Konfirmasi Kehadiran")
 def show_confirm_modal(n):
     form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
     info = DATABASE_INFO.get(n)
     
-    # URL Encoding agar Jabatan yang panjang/bertanda baca tidak error
+    # URL Encoding sempurna
     nama_enc = urllib.parse.quote_plus(n)
     nip_enc = urllib.parse.quote_plus(info[0])
     jab_enc = urllib.parse.quote_plus(info[1])
@@ -146,18 +146,17 @@ def show_confirm_modal(n):
         f"submit=Submit"
     )
     
-    st.write("Sistem akan mengisi otomatis Nama, NIP, dan Jabatan untuk:")
+    st.write("Sistem akan mengirimkan data otomatis untuk:")
     st.subheader(f"{n}")
     st.markdown(f"""
-        <div style="background: rgba(249,115,22,0.1); padding: 15px; border-radius: 10px; border: 1px solid rgba(249,115,22,0.3); margin-top: 10px;">
-            <p style="margin:0; font-size: 12px; color: #fca5a5;">JABATAN TERDETEKSI:</p>
-            <p style="margin:5px 0 0 0; font-size: 14px; line-height: 1.4;">{info[1]}</p>
+        <div style="background: rgba(249,115,22,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(249,115,22,0.3); margin-top: 10px;">
+            <p style="margin:0; font-size: 11px; color: #fca5a5;">JABATAN (AUTO-SELECT):</p>
+            <p style="margin:5px 0 0 0; font-size: 14px; font-weight: bold;">{info[1]}</p>
         </div>
         <br>
         <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 18px; box-shadow: 0 10px 25px rgba(249,115,22,0.4);">
-            KIRIM ABSENSI SEKARANG ✅
+            KONFIRMASI & KIRIM ✅
         </a>
-        <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 15px;">Data dijamin terisi lengkap secara otomatis.</p>
     """, unsafe_allow_html=True)
 
 # 7. RENDER LIST
