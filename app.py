@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-import re
 from datetime import datetime, timedelta
 import time
 import random
@@ -14,7 +13,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (HASIL SCAN EXCEL & SYNC GOOGLE FORM)
+# 2. DATABASE PEGAWAI (HASIL SCAN EXCEL TERBARU & SYNC FORM)
+# Catatan: Jabatan disesuaikan dengan teks pilihan yang ada di Google Form
 DATABASE_INFO = {
     # --- PNS (17 Orang) ---
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris KPU"],
@@ -41,11 +41,11 @@ DATABASE_INFO = {
     "M Satria Maipadly": ["198905262024211016", "Penata Kelola Pemilihan Umum Ahli Pertama"],
     "Basuki Rahmat": ["197705222024211007", "Penata Kelola Pemilihan Umum Ahli Pertama"],
     "Sulaiman": ["198411222024211010", "Penata Kelola Pemilihan Umum Ahli Pertama"],
-    "Saldoz Yedi": ["198008112025211019", "Pengelola Layanan Operasional"],
-    "Mastoni Ridani": ["199106012025211018", "Pengelola Layanan Operasional"],
-    "Suriadi": ["199803022025211005", "Pengelola Layanan Operasional"],
-    "Ami Aspihani": ["198204042025211031", "Pengelola Layanan Operasional"],
-    "Abdurrahman": ["198810122025211031", "Pengelola Layanan Operasional"],
+    "Saldoz Yedi": ["198008112025211019", "Operator Layanan Operasional"],
+    "Mastoni Ridani": ["199106012025211018", "Operator Layanan Operasional"],
+    "Suriadi": ["199803022025211005", "Pengelola Umum Operasional"],
+    "Ami Aspihani": ["198204042025211031", "Operator Layanan Operasional"],
+    "Abdurrahman": ["198810122025211031", "Operator Layanan Operasional"],
     "Emaliani": ["198906222025212027", "Pengadministrasi Umum"],
     "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "Penata Kelola Pemilihan Umum Ahli Pertama"],
     "Saiful Fahmi, S.Pd": ["199506172025211036", "Penata Kelola Pemilihan Umum Ahli Pertama"],
@@ -55,7 +55,7 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS MODERN
+# 3. STYLE CSS
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
@@ -113,7 +113,7 @@ URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. POP-UP DENGAN URL ENCODING & JABATAN SYNC
+# 6. POP-UP (MODAL)
 @st.dialog("Konfirmasi Kehadiran")
 def show_confirm_modal(n):
     form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
@@ -139,11 +139,12 @@ def render_list(log, master_list, tab_id):
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div class='{cl_class}'>{d['k']}</div></div>", unsafe_allow_html=True)
         st.markdown("<hr style='margin:8px 0; border:0; border-top: 1px solid rgba(255,255,255,0.05)'>", unsafe_allow_html=True)
 
-# 8. TABS & FOOTER
+# 8. TABS
 st.markdown("<br>", unsafe_allow_html=True)
 t1, t2, t3 = st.tabs(["🌎 SEMUA (31)", "👥 PNS (17)", "👥 PPPK (14)"])
 with t1: render_list(log_all, list(DATABASE_INFO.keys()), "tab1")
 with t2: render_list(log_all, MASTER_PNS, "tab2")
 with t3: render_list(log_all, MASTER_PPPK, "tab3")
 
+# 9. FOOTER MARQUEE
 st.markdown(f"""<div class="marquee-container"><div class="marquee-text">🔴 MONITORING ABSENSI SEKRETARIAT KPU KABUPATEN HULU SUNGAI SELATAN --- JANGAN LUPA ABSEN PAGI DAN SORE --- TETAP SEMANGAT BEKERJA UNTUK NEGERI --- DATA TER-UPDATE SECARA OTOMATIS --- JAM WITA: {wita_now.strftime("%H:%M")} --- HARI INI: {wita_now.strftime("%d %B %Y")}</div></div><br><br><br>""", unsafe_allow_html=True)
