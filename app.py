@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import re
 from datetime import datetime, timedelta
 import time
 import random
@@ -12,7 +13,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", page_icon="👻", layout="wide")
 
-# 2. DATABASE PEGAWAI (PRESISI 100% SESUAI EXCEL)
+# 2. DATABASE PEGAWAI (PRESISI SESUAI EXCEL)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -54,49 +55,48 @@ MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
-    .clock-text { font-size: clamp(40px, 8vw, 70px); font-weight: 900; text-align: center; color: white; text-shadow: 0 0 20px #f97316; margin-bottom: 20px; }
+    .clock-text { font-size: clamp(40px, 8vw, 70px); font-weight: 900; text-align: center; color: white; text-shadow: 0 0 20px #f97316; }
     div.stButton > button {
         background-color: rgba(249, 115, 22, 0.1) !important; color: #fecaca !important;
         border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
         text-align: left !important; padding-left: 20px !important; height: 55px !important; border-radius: 12px !important;
     }
     div.stButton > button:hover { background-color: rgba(249, 115, 22, 0.3) !important; border: 1px solid #f97316 !important; color: white !important; }
-    .label-k { font-size: 10px; color: #fca5a5; text-transform: uppercase; }
-    .val-v { font-size: 18px; font-weight: 800; color: #ffffff; }
     </style>
     """, unsafe_allow_html=True)
 
-# 4. FUNGSI CORE (THE BYPASS ENGINE)
+# 4. FUNGSI CORE (THE TOKEN STEALER)
 def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
 
 def kirim_absen_silent(nama, is_pns):
-    target = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
+    view_url = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/viewform" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/viewform"
+    post_url = view_url.replace("/viewform", "/formResponse")
     info = DATABASE_INFO.get(nama)
     
-    # Payload dengan Bypass Draft & Force Jabatan
-    payload = {
-        "entry.960346359": nama,
-        "entry.468881973": info[0],
-        "entry.159009649": info[1],
-        "partialResponse": [None, None, [None, info[1]]],
-        "pageHistory": 0,
-        "continue": 1  # AUTO-CLICK PERBARUI
-    }
-    
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Referer": target.replace("/formResponse", "/viewform")
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0"}
 
     try:
-        r = requests.post(target, data=payload, headers=headers, timeout=15)
-        # Status 200 berarti diterima oleh Google
-        return r.status_code == 200
+        with requests.Session() as s:
+            res = s.get(view_url, headers=headers, timeout=10)
+            token_match = re.search(r'name="fbzx" value="([^"]+)"', res.text)
+            fbzx_token = token_match.group(1) if token_match else ""
+
+            payload = {
+                "entry.960346359": nama,
+                "entry.468881973": info[0],
+                "entry.159009649": info[1],
+                "fvv": "1",
+                "pageHistory": "0",
+                "fbzx": fbzx_token,
+                "continue": "1"
+            }
+            r = s.post(post_url, data=payload, headers=headers, timeout=15)
+            return r.status_code == 200 or "recorded" in r.text.lower()
     except:
         return False
 
+# --- LOGIKA TAMPILAN ---
 @st.cache_data(ttl=30)
 def fetch_raw(url):
     try:
@@ -117,7 +117,6 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. TAMPILAN UTAMA
 wita_now = get_wita()
 st.markdown(f'<div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
 tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
@@ -133,16 +132,15 @@ def render_list(log, master_list):
         cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if "LUPA" in d["k"] else "#f87171"
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
-            nama_singkat = n.split(',')[0]
-            if st.button(f"👤 {nama_singkat}", key=f"btn_{idx}_{n}", use_container_width=True):
-                with st.spinner('Proses Bypass...'):
+            nama_tombol = n.split(',')[0]
+            if st.button(f"👤 {nama_tombol}", key=f"btn_{idx}_{n}", use_container_width=True):
+                with st.spinner('Menembus Gembok...'):
                     if kirim_absen_silent(n, n in MASTER_PNS):
-                        st.toast(f"✅ Sukses: {nama_singkat}", icon="🚀")
+                        st.toast(f"✅ Sukses: {nama_tombol}", icon="🚀")
                         st.cache_data.clear()
                         time.sleep(1)
                         st.rerun()
-                    else:
-                        st.error("Gagal! Coba Klik Manual Dulu di HP.")
+                    else: st.error("Gagal! Pastikan Setelan Form SUDAH PUBLIC.")
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
