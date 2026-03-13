@@ -14,10 +14,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (TOTAL 31 PEGAWAI: 17 PNS & 14 PPPK)
-# JABATAN DISESUAIKAN PERSIS DENGAN PILIHAN DI GOOGLE FORM
+# 2. DATABASE PEGAWAI (HASIL SCAN EXCEL & SYNC GOOGLE FORM)
 DATABASE_INFO = {
-    # --- 17 PNS ---
+    # --- PNS (17 Orang) ---
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris KPU"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kasubbag TP-Hupmas"],
     "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kasubbag Keuangan, Umum dan Logistik"],
@@ -35,8 +34,8 @@ DATABASE_INFO = {
     "Alfian Ridhani, S.Kom": ["19950903202506 1 005", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem Dan Teknologi Informasi"],
-    
-    # --- 14 PPPK ---
+
+    # --- PPPK (14 Orang) ---
     "Sya'bani Rona Baika": ["199202072024212044", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "Apriadi Rakhman": ["198904222024211013", "Penata Kelola Sistem Dan Teknologi Informasi"],
     "M Satria Maipadly": ["198905262024211016", "Penata Kelola Pemilihan Umum Ahli Pertama"],
@@ -56,44 +55,34 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS LUXURY
+# 3. CSS MODERN
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
     .header-box { text-align: center; padding: 40px 0 20px 0; }
     .clock-text { font-size: clamp(55px, 10vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.7); line-height: 1; }
     .date-text { font-size: clamp(18px, 3vw, 24px); color: #f97316; font-weight: 500; margin-top: 5px; letter-spacing: 2px; }
-    
     div.stButton > button {
         background: rgba(255, 255, 255, 0.03) !important; color: #f1f5f9 !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important; 
         font-weight: 600 !important; text-align: left !important; 
-        padding-left: 20px !important; height: 64px !important; 
-        border-radius: 18px !important;
+        padding-left: 20px !important; height: 64px !important; border-radius: 18px !important;
     }
     div.stButton > button:hover { background: rgba(249, 115, 22, 0.2) !important; border: 1px solid #f97316 !important; }
-    
     .status-hadir { color: #4ade80; font-weight: 900; }
     .status-lupa { color: #fb923c; font-weight: 900; }
     .status-belum { color: #f87171; font-weight: 900; }
-
     .marquee-container {
-        position: fixed; bottom: 0; left: 0; width: 100%;
-        background: rgba(15, 2, 2, 0.95); backdrop-filter: blur(15px);
-        padding: 14px 0; border-top: 1px solid rgba(249, 115, 22, 0.3); z-index: 1000;
-        overflow: hidden;
+        position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(15, 2, 2, 0.95); backdrop-filter: blur(15px);
+        padding: 14px 0; border-top: 1px solid rgba(249, 115, 22, 0.3); z-index: 1000; overflow: hidden;
     }
-    .marquee-text {
-        display: inline-block; white-space: nowrap; animation: scroll 40s linear infinite;
-        font-size: 15px; font-weight: 600; color: #fca5a5;
-    }
+    .marquee-text { display: inline-block; white-space: nowrap; animation: scroll 40s linear infinite; font-size: 15px; font-weight: 600; color: #fca5a5; }
     @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     </style>
     """, unsafe_allow_html=True)
 
 # 4. FUNGSI DATA
-def get_wita():
-    return datetime.utcnow() + timedelta(hours=8)
+def get_wita(): return datetime.utcnow() + timedelta(hours=8)
 
 @st.cache_data(ttl=15)
 def fetch_raw(url):
@@ -117,62 +106,34 @@ def process_log(df, tgl):
 
 # 5. UI HEADER
 wita_now = get_wita()
-st.markdown(f"""
-    <div class="header-box">
-        <div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>
-        <div class="date-text">{wita_now.strftime("%A, %d %B %Y").upper()}</div>
-    </div>
-""", unsafe_allow_html=True)
-
+st.markdown(f"""<div class="header-box"><div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div><div class="date-text">{wita_now.strftime("%A, %d %B %Y").upper()}</div></div>""", unsafe_allow_html=True)
 tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
-
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. POP-UP DENGAN DATA VALID
+# 6. POP-UP DENGAN URL ENCODING & JABATAN SYNC
 @st.dialog("Konfirmasi Kehadiran")
 def show_confirm_modal(n):
     form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
     info = DATABASE_INFO.get(n)
-    
     nama_enc = urllib.parse.quote_plus(n)
     nip_enc = urllib.parse.quote_plus(info[0])
     jab_enc = urllib.parse.quote_plus(info[1])
-    
-    url_submit = (
-        f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
-        f"entry.960346359={nama_enc}&"
-        f"entry.468881973={nip_enc}&"
-        f"entry.159009649={jab_enc}&"
-        f"submit=Submit"
-    )
-    
-    st.write("Sistem akan mengirimkan data otomatis untuk:")
+    url_submit = f"https://docs.google.com/forms/d/e/{form_id}/formResponse?entry.960346359={nama_enc}&entry.468881973={nip_enc}&entry.159009649={jab_enc}&submit=Submit"
     st.subheader(f"{n}")
-    st.markdown(f"""
-        <div style="background: rgba(249,115,22,0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(249,115,22,0.3); margin-top: 10px;">
-            <p style="margin:0; font-size: 11px; color: #fca5a5;">JABATAN (FIXED):</p>
-            <p style="margin:5px 0 0 0; font-size: 14px; font-weight: bold;">{info[1]}</p>
-        </div>
-        <br>
-        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 18px; box-shadow: 0 10px 25px rgba(249,115,22,0.4);">
-            KONFIRMASI & KIRIM ✅
-        </a>
-    """, unsafe_allow_html=True)
+    st.write(f"Jabatan: {info[1]}")
+    st.markdown(f"""<br><a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 18px; box-shadow: 0 10px 25px rgba(249,115,22,0.4);">KONFIRMASI & KIRIM ✅</a>""", unsafe_allow_html=True)
 
 # 7. RENDER LIST
 def render_list(log, master_list, tab_id):
     for idx, n in enumerate(master_list):
         d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
         cl_class = "status-hadir" if d["k"]=="HADIR" else "status-lupa" if "LUPA" in d["k"] else "status-belum"
-        
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
-            nama_tombol = n.split(',')[0]
-            if st.button(f"👤 {nama_tombol}", key=f"btn_{tab_id}_{idx}", use_container_width=True):
-                show_confirm_modal(n)
+            if st.button(f"👤 {n.split(',')[0]}", key=f"btn_{tab_id}_{idx}", use_container_width=True): show_confirm_modal(n)
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div class='{cl_class}'>{d['k']}</div></div>", unsafe_allow_html=True)
@@ -185,11 +146,4 @@ with t1: render_list(log_all, list(DATABASE_INFO.keys()), "tab1")
 with t2: render_list(log_all, MASTER_PNS, "tab2")
 with t3: render_list(log_all, MASTER_PPPK, "tab3")
 
-st.markdown(f"""
-    <div class="marquee-container">
-        <div class="marquee-text">
-            🔴 MONITORING ABSENSI SEKRETARIAT KPU KABUPATEN HULU SUNGAI SELATAN --- JANGAN LUPA ABSEN PAGI DAN SORE --- TETAP SEMANGAT BEKERJA UNTUK NEGERI --- DATA TER-UPDATE SECARA OTOMATIS --- JAM WITA: {wita_now.strftime("%H:%M")} --- HARI INI: {wita_now.strftime("%d %B %Y")}
-        </div>
-    </div>
-    <br><br><br>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="marquee-container"><div class="marquee-text">🔴 MONITORING ABSENSI SEKRETARIAT KPU KABUPATEN HULU SUNGAI SELATAN --- JANGAN LUPA ABSEN PAGI DAN SORE --- TETAP SEMANGAT BEKERJA UNTUK NEGERI --- DATA TER-UPDATE SECARA OTOMATIS --- JAM WITA: {wita_now.strftime("%H:%M")} --- HARI INI: {wita_now.strftime("%d %B %Y")}</div></div><br><br><br>""", unsafe_allow_html=True)
