@@ -7,13 +7,14 @@ import time
 import random
 from io import StringIO
 import urllib3
+import urllib.parse
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI
+# 2. DATABASE PEGAWAI (LENGKAP)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -51,12 +52,12 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS (LUXURY MODAL STYLE)
+# 3. CSS (LUXURY EXECUTIVE)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
     .header-box { text-align: center; padding: 40px 0 20px 0; }
-    .clock-text { font-size: clamp(55px, 10vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.7); }
+    .clock-text { font-size: clamp(55px, 10vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.7); line-height: 1; }
     .date-text { font-size: clamp(18px, 3vw, 24px); color: #f97316; font-weight: 500; margin-top: 5px; letter-spacing: 2px; }
     
     div.stButton > button {
@@ -64,7 +65,7 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1) !important; 
         font-weight: 600 !important; text-align: left !important; 
         padding-left: 20px !important; height: 64px !important; 
-        border-radius: 18px !important;
+        border-radius: 18px !important; transition: 0.3s;
     }
     div.stButton > button:hover { background: rgba(249, 115, 22, 0.2) !important; border: 1px solid #f97316 !important; }
     
@@ -72,11 +73,11 @@ st.markdown("""
     .status-lupa { color: #fb923c; font-weight: 900; }
     .status-belum { color: #f87171; font-weight: 900; }
 
-    /* Floating Marquee */
     .marquee-container {
         position: fixed; bottom: 0; left: 0; width: 100%;
         background: rgba(15, 2, 2, 0.95); backdrop-filter: blur(15px);
         padding: 14px 0; border-top: 1px solid rgba(249, 115, 22, 0.3); z-index: 1000;
+        overflow: hidden;
     }
     .marquee-text {
         display: inline-block; white-space: nowrap; animation: scroll 38s linear infinite;
@@ -110,7 +111,7 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. UI HEADER
+# 5. HEADER
 wita_now = get_wita()
 st.markdown(f"""
     <div class="header-box">
@@ -126,29 +127,38 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. FUNGSI MODAL (POP-UP)
+# 6. FUNGSI POP-UP (MODAL) DENGAN URL ENCODING KERAS
 @st.dialog("Konfirmasi Kehadiran")
 def show_confirm_modal(n):
     form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
     info = DATABASE_INFO.get(n)
+    
+    # URL Encoding agar Jabatan yang panjang/bertanda baca tidak error
+    nama_enc = urllib.parse.quote_plus(n)
+    nip_enc = urllib.parse.quote_plus(info[0])
+    jab_enc = urllib.parse.quote_plus(info[1])
+    
     url_submit = (
         f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
-        f"entry.960346359={n.replace(' ', '+')}&"
-        f"entry.468881973={info[0].replace(' ', '+')}&"
-        f"entry.159009649={info[1].replace(' ', '+')}&"
+        f"entry.960346359={nama_enc}&"
+        f"entry.468881973={nip_enc}&"
+        f"entry.159009649={jab_enc}&"
         f"submit=Submit"
     )
-    st.write(f"Apakah Anda ingin mengirim absensi untuk:")
+    
+    st.write("Sistem akan mengisi otomatis Nama, NIP, dan Jabatan untuk:")
     st.subheader(f"{n}")
     st.markdown(f"""
+        <div style="background: rgba(249,115,22,0.1); padding: 15px; border-radius: 10px; border: 1px solid rgba(249,115,22,0.3); margin-top: 10px;">
+            <p style="margin:0; font-size: 12px; color: #fca5a5;">JABATAN TERDETEKSI:</p>
+            <p style="margin:5px 0 0 0; font-size: 14px; line-height: 1.4;">{info[1]}</p>
+        </div>
         <br>
-        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 18px; border-radius: 12px; font-weight: 800; font-size: 18px; box-shadow: 0 10px 25px rgba(249,115,22,0.4);">
-            KIRIM SEKARANG ✅
+        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 18px; box-shadow: 0 10px 25px rgba(249,115,22,0.4);">
+            KIRIM ABSENSI SEKARANG ✅
         </a>
-        <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 15px;">Klik tombol di atas untuk masuk ke sistem Google.</p>
+        <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 15px;">Data dijamin terisi lengkap secara otomatis.</p>
     """, unsafe_allow_html=True)
-    if st.button("Batal", use_container_width=True):
-        st.rerun()
 
 # 7. RENDER LIST
 def render_list(log, master_list, tab_id):
