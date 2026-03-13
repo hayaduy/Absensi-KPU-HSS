@@ -13,7 +13,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Absensi KPU HSS", page_icon="🚀", layout="wide")
 
-# 2. DATABASE PEGAWAI (LENGKAP)
+# 2. DATABASE PEGAWAI (PRESISI 100%)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -51,12 +51,12 @@ DATABASE_INFO = {
 MASTER_PNS = list(DATABASE_INFO.keys())[:17]
 MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
-# 3. CSS (PREMIUM ELEGANT)
+# 3. CSS (GLASSMORPHISM & MARQUEE)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f0202 0%, #1a0505 100%); color: #ffffff; }
     .header-box { text-align: center; padding: 40px 0 20px 0; }
-    .clock-text { font-size: clamp(50px, 9vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.6); }
+    .clock-text { font-size: clamp(50px, 9vw, 85px); font-weight: 900; color: #ffffff; text-shadow: 0 0 40px rgba(249, 115, 22, 0.6); line-height: 1; }
     .date-text { font-size: clamp(18px, 3vw, 24px); color: #f97316; font-weight: 500; margin-top: 5px; letter-spacing: 2px; }
     
     div.stButton > button {
@@ -86,30 +86,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 4. FUNGSI CORE
+# 4. FUNGSI DATA
 def get_wita():
     return datetime.utcnow() + timedelta(hours=8)
-
-def kirim_absen_otomatis(nama, is_pns):
-    form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if is_pns else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
-    info = DATABASE_INFO.get(nama)
-    url = f"https://docs.google.com/forms/d/e/{form_id}/formResponse"
-    
-    payload = {
-        "entry.960346359": nama,
-        "entry.468881973": info[0],
-        "entry.159009649": info[1],
-        "fvv": "1", "pageHistory": "0"
-    }
-    
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0"}
-    
-    try:
-        # Tembak secara asinkron (GHOST POST)
-        r = requests.post(url, data=payload, headers=headers, timeout=10)
-        return r.status_code == 200
-    except:
-        return False
 
 @st.cache_data(ttl=15)
 def fetch_raw(url):
@@ -147,7 +126,7 @@ URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKo
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-# 6. RENDER LIST (FULLY AUTOMATIC)
+# 6. RENDER LIST (HYBRID ELEGANT)
 def render_list(log, master_list, tab_id):
     for idx, n in enumerate(master_list):
         d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
@@ -156,15 +135,26 @@ def render_list(log, master_list, tab_id):
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
             nama_tombol = n.split(',')[0]
-            if st.button(f"👤 {nama_tombol}", key=f"btn_{tab_id}_{idx}"):
-                with st.spinner(f'Mengirim Absen {nama_tombol}...'):
-                    if kirim_absen_otomatis(n, n in MASTER_PNS):
-                        st.success(f"✅ Berhasil! Data {nama_tombol} masuk ke Sheets.")
-                        st.cache_data.clear()
-                        time.sleep(2)
-                        st.rerun()
-                    else:
-                        st.error("Gagal! Coba pastikan internet stabil.")
+            if st.button(f"👤 {nama_tombol}", key=f"btn_{tab_id}_{idx}", use_container_width=True):
+                form_id = "1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA" if n in MASTER_PNS else "1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw"
+                info = DATABASE_INFO.get(n)
+                url_submit = (
+                    f"https://docs.google.com/forms/d/e/{form_id}/formResponse?"
+                    f"entry.960346359={n.replace(' ', '+')}&"
+                    f"entry.468881973={info[0].replace(' ', '+')}&"
+                    f"entry.159009649={info[1].replace(' ', '+')}&"
+                    f"submit=Submit"
+                )
+                st.markdown(f"""
+                    <div style="background: rgba(249,115,22,0.15); padding: 20px; border-radius: 15px; border: 1px solid #f97316; margin: 15px 0; text-align: center;">
+                        <p style="margin:0; font-size: 13px; color: #fca5a5; letter-spacing: 1px;">SIAP KIRIM ABSENSI:</p>
+                        <p style="margin:5px 0 18px 0; font-weight: 800; font-size: 18px; color: #ffffff;">{n}</p>
+                        <a href="{url_submit}" target="_blank" style="text-decoration: none; display: block; background: linear-gradient(90deg, #f97316, #ea580c); color: white; text-align: center; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px;">
+                            KLIK UNTUK KONFIRMASI ✅
+                        </a>
+                        <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">(Akan membuka tab baru sebentar untuk verifikasi Google)</p>
+                    </div>
+                """, unsafe_allow_html=True)
 
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
