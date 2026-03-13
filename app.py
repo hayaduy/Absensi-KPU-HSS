@@ -12,7 +12,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", page_icon="👻", layout="wide")
 
-# 2. DATABASE PEGAWAI (PRESISI 100%)
+# 2. DATABASE PEGAWAI (PRESISI 100% SESUAI EXCEL)
 DATABASE_INFO = {
     "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
     "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
@@ -54,7 +54,7 @@ MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
-    .clock-text { font-size: 60px; font-weight: 900; text-align: center; color: white; text-shadow: 0 0 20px #f97316; margin-bottom: 20px; }
+    .clock-text { font-size: clamp(40px, 8vw, 70px); font-weight: 900; text-align: center; color: white; text-shadow: 0 0 20px #f97316; margin-bottom: 20px; }
     div.stButton > button {
         background-color: rgba(249, 115, 22, 0.1) !important; color: #fecaca !important;
         border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
@@ -74,16 +74,17 @@ def kirim_absen_silent(nama, is_pns):
     target = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
     info = DATABASE_INFO.get(nama)
     
-    # Payload dikirim persis sesuai yang diminta Google Form
+    # Payload Lengkap (Nama, NIP, Jabatan) + Parameter Anti-Draft
     payload = {
         "entry.960346359": nama,
         "entry.468881973": info[0],
-        "entry.159009649": info[1]
+        "entry.159009649": info[1],
+        "draftResponse": [],
+        "pageHistory": 0
     }
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
-        # Tambahkan allow_redirects=True agar proses submission dianggap selesai oleh server
-        r = requests.post(target, data=payload, headers=headers, timeout=10, allow_redirects=True)
+        r = requests.post(target, data=payload, headers=headers, timeout=15)
         return r.status_code == 200
     except:
         return False
@@ -108,10 +109,11 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. TAMPILAN
+# 5. TAMPILAN UTAMA
 wita_now = get_wita()
 st.markdown(f'<div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
-tgl_pilihan = st.date_input("Filter Tanggal", wita_now.date(), label_visibility="collapsed")
+
+tgl_pilihan = st.date_input("Filter", wita_now.date(), label_visibility="collapsed")
 
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
@@ -124,17 +126,16 @@ def render_list(log, master_list):
         cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if "LUPA" in d["k"] else "#f87171"
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
-            # TAMPILKAN NAMA SINGKAT DI TOMBOL, TAPI KIRIM NAMA LENGKAP KE GOOGLE
-            nama_tombol = n.split(',')[0]
-            if st.button(f"👤 {nama_tombol}", key=f"btn_{idx}_{n}", use_container_width=True):
-                with st.spinner('Absen...'):
+            nama_singkat = n.split(',')[0]
+            if st.button(f"👤 {nama_singkat}", key=f"btn_{idx}_{n}", use_container_width=True):
+                with st.spinner('Proses...'):
                     if kirim_absen_silent(n, n in MASTER_PNS):
-                        st.toast(f"✅ Sukses: {nama_tombol}", icon="🚀")
+                        st.toast(f"✅ Sukses: {nama_singkat}", icon="🚀")
                         st.cache_data.clear()
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("Gagal! Pastikan Form Public.")
+                        st.error("Gagal! Matikan 'Autosave' di Form.")
         with c2: st.markdown(f"<div style='text-align:center'><div class='label-k'>Pagi</div><div class='val-v'>{d['m']}</div></div>", unsafe_allow_html=True)
         with c3: st.markdown(f"<div style='text-align:center'><div class='label-k'>Sore</div><div class='val-v'>{d['p']}</div></div>", unsafe_allow_html=True)
         with c4: st.markdown(f"<div style='text-align:center'><div class='label-k'>Ket</div><div style='color:{cl}; font-weight:900;'>{d['k']}</div></div>", unsafe_allow_html=True)
