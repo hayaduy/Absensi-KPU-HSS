@@ -12,40 +12,49 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. KONFIGURASI HALAMAN
 st.set_page_config(page_title="Monitoring Absensi KPU HSS", page_icon="👻", layout="wide")
 
-# 2. DATABASE NIP & JABATAN (LENGKAP)
-# Sistem akan otomatis mengambil NIP & Jabatan saat nama diklik
+# 2. DATABASE PEGAWAI (Disesuaikan 100% dengan Foto Excel kamu)
 DATABASE_INFO = {
-    "Suwanto, SH., MH.": ["197103031993031005", "SEKRETARIS"],
-    "Wawan Setiawan, SH": ["198105252009041001", "KASUBBAG TEKNIS"],
-    "Ineke Setiyaningsih, S.Sos": ["197505242006042017", "KASUBBAG KEUANGAN"],
-    "Farah Agustina Setiawati, SH": ["198408012009122003", "KASUBBAG HUKUM"],
-    "Rusma Ariati, SE": ["197904222008012018", "KASUBBAG UMUM"],
-    "Abdurrahman": ["198810122025211031", "OPERATOR LAYANAN OPERASIONAL"],
-    # Pegawai lain akan otomatis pakai NIP '-' dan Jabatan 'STAF' jika belum didaftarkan di sini
+    "Suwanto, SH., MH.": ["19720521 200912 1 001", "Sekretaris"],
+    "Wawan Setiawan, SH": ["19860601 201012 1 004", "Kepala Sub. Bagian Teknis Pemilu, Partisipasi dan Hubungan Masyarakat"],
+    "Ineke Setiyaningsih, S.Sos": ["19831003 200912 2 001", "Kepala Sub Bagian Keuangan, Umum dan Logistik"],
+    "Farah Agustina Setiawati, SH": ["19840828 201012 2 003", "Kepala Sub. Bagian Hukum dan Sumber Daya Manusia"],
+    "Rusma Ariati, SE": ["19840621 201101 2 013", "Kepala Sub. Bagian Perencanaan Data dan Informasi"],
+    "Helmalina": ["19680318 199003 2 003", "Penelaah Teknis Kebijakan"],
+    "Ahmad Erwan Rifani, S.HI": ["19830829 200811 1 001", "Penelaah Teknis Kebijakan"],
+    "Syaiful Anwar": ["19741127 200710 1 001", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Zainal Hilmi Yustan": ["19821025 200701 1 003", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Najmi Hidayati": ["19850608 200701 2 003", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Jainal Abidin": ["19820712 200910 1 001", "Pengelola layanan operasional"],
+    "Suci Lestari, S.Ikom": ["19850108 201012 2 006", "Penelaah Teknis Kebijakan"],
+    "Athaya Insyira Khairani, S.H": ["20010712202506 2 017", "Penyusun Materi Hukum dan Perundang-Undangan"],
+    "Muhammad Ibnu Fahmi, S.H.": ["20010608202506 1 007", "Penyusun Materi Hukum dan Perundang-Undangan"],
+    "Alfian Ridhani, S.Kom": ["19950903202506 1 005", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Muhammad Aldi Hudaifi, S.Kom": ["20010121202506 1 007", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Firda Aulia, S.Kom.": ["20020415202506 2 007", "Penata Kelola Sistem dan Teknologi Informasi"],
+    "Sya'bani Rona Baika": ["199202072024212044", "Ahli Pertama-Pranata Komputer"],
+    "Apriadi Rakhman": ["198904222024211013", "Ahli Pertama-Pranata Komputer"],
+    "M Satria Maipadly": ["198905262024211016", "Ahli Pertama-Penata Kelola Pemilu"],
+    "Basuki Rahmat": ["197705222024211007", "Penata Kelola Pemilihan Umum Ahli Pertama"],
+    "Sulaiman": ["198411222024211010", "Penata Kelola Pemilihan Umum Ahli Pertama"],
+    "Saldoz Yedi": ["198008112025211019", "Operator Layanan Operasional"],
+    "Mastoni Ridani": ["199106012025211018", "Operator Layanan Operasional"],
+    "Suriadi": ["199803022025211005", "Pengelola Umum Operasional"],
+    "Ami Aspihani": ["198204042025211031", "Operator Layanan Operasional"],
+    "Abdurrahman": ["198810122025211031", "Operator Layanan Operasional"],
+    "Emaliani": ["198906222025212027", "Pengadministrasi Perkantoran"],
+    "Muhammad Hafiz Rijani, S.KOM": ["199603212025211031", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Saiful Fahmi, S.Pd": ["199506172025211036", "PENATA KELOLA PEMILU AHLI PERTAMA"],
+    "Nadianti": ["199906062025212036", "PENGADMINISTRASI PERKANTORAN"]
 }
 
-MASTER_PNS = [
-    "Suwanto, SH., MH.", "Wawan Setiawan, SH", "Ineke Setiyaningsih, S.Sos", 
-    "Farah Agustina Setiawati, SH", "Rusma Ariati, SE", "Helmalina", 
-    "Ahmad Erwan Rifani, S.HI", "Syaiful Anwar", "Zainal Hilmi Yustan", 
-    "Najmi Hidayati", "Jainal Abidin", "Suci Lestari, S.Ikom", 
-    "Athaya Insyira Khairani, S.H", "Muhammad Ibnu Fahmi, S.H.", 
-    "Alfian Ridhani, S.Kom", "Muhammad Aldi Hudaifi, S.Kom", "Firda Aulia, S.Kom."
-]
-MASTER_PPPK = [
-    "Sya'bani Rona Baika", "Apriadi Rakhman", "M Satria Maipadly", 
-    "Basuki Rahmat", "Sulaiman", "Saldoz Yedi", "Mastoni Ridani", 
-    "Suriadi", "Ami Aspihani", "Abdurrahman", "Emaliani", 
-    "Muhammad Hafiz Rijani, S.KOM", "Saiful Fahmi, S.Pd", "Nadianti"
-]
-MASTER_ALL = MASTER_PNS + MASTER_PPPK
+MASTER_PNS = list(DATABASE_INFO.keys())[:17]
+MASTER_PPPK = list(DATABASE_INFO.keys())[17:]
 
 # 3. CSS MODERN
 st.markdown("""
     <style>
     .stApp { background-color: #1a0505; color: #ffffff; }
-    .block-container { padding-top: 1rem; max-width: 1000px !important; margin: 0 auto; }
-    .clock-text { font-size: 70px; font-weight: 900; text-align: center; color: white; text-shadow: 0 0 20px #f97316; }
+    .clock-text { font-size: 60px; font-weight: 900; text-align: center; color: white; text-shadow: 0 0 20px #f97316; margin-bottom: 20px; }
     div.stButton > button {
         background-color: rgba(249, 115, 22, 0.1) !important; color: #fecaca !important;
         border: 1px solid rgba(249, 115, 22, 0.3) !important; font-weight: bold !important;
@@ -63,10 +72,7 @@ def get_wita():
 
 def kirim_absen_silent(nama, is_pns):
     target = "https://docs.google.com/forms/d/e/1FAIpQLSdfwUrcxoTer6M2NEMOpxoFYF8e9lBe5reG7rF1ZQIdtjRwzA/formResponse" if is_pns else "https://docs.google.com/forms/d/e/1FAIpQLSe4pgHjDzZB9OTgbq7XNw5SWTNIo0AjTnnVUukd13e9BgkNPw/formResponse"
-    
-    # Ambil NIP & Jabatan otomatis dari database di atas
-    info = DATABASE_INFO.get(nama, ["-", "STAF / ANGGOTA"])
-    
+    info = DATABASE_INFO.get(nama, ["-", "-"])
     payload = {
         "entry.960346359": nama,
         "entry.468881973": info[0],
@@ -97,28 +103,26 @@ def process_log(df, tgl):
                 if ts.hour >= 15: log[n]["p"] = ts.strftime("%H:%M")
     return log
 
-# 5. TAMPILAN
+# 5. TAMPILAN UTAMA
 wita_now = get_wita()
 st.markdown(f'<div class="clock-text">{wita_now.strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
 
 tgl_pilihan = st.date_input("Filter Tanggal", wita_now.date(), label_visibility="collapsed")
 
-# Fetch data Sheets
 URL_PNS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYD-AykhJVjxuA9m58Lm2V_cRkY0lJCU-tqRkC3KSIYapExZ_mjjUp7P0cPN65woxgP40cAFT0OQxB/pub?output=csv"
 URL_PPPK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBqcP87DFbzstOyigKoUnn35yItImnsvxm_5F7oJLgeFmGVYjXXmTv7GpBWV6yEjkdwJkQ26yOVg_1/pub?output=csv"
 
 log_all = {**process_log(fetch_raw(URL_PNS), tgl_pilihan), **process_log(fetch_raw(URL_PPPK), tgl_pilihan)}
 
-def render_list(log, master):
-    for idx, n in enumerate(master):
+def render_list(log, master_list):
+    for idx, n in enumerate(master_list):
         d = log.get(n, {"m": "--:--", "p": "--:--", "k": "BELUM ABSEN"})
         cl = "#4ade80" if d["k"]=="HADIR" else "#fb923c" if "LUPA" in d["k"] else "#f87171"
-        
         c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
         with c1:
-            if st.button(f"👤 {n.split(',')[0]}", key=f"btn_{n}_{idx}"):
+            if st.button(f"👤 {n.split(',')[0]}", key=f"btn_{idx}_{n}"):
                 if kirim_absen_silent(n, n in MASTER_PNS):
-                    st.toast(f"✅ Berhasil Absen {n}!", icon="🚀")
+                    st.toast(f"✅ Sukses: {n}", icon="🚀")
                     st.cache_data.clear()
                     time.sleep(1)
                     st.rerun()
@@ -129,6 +133,6 @@ def render_list(log, master):
         st.markdown("<hr style='margin:5px 0; opacity:0.1'>", unsafe_allow_html=True)
 
 t1, t2, t3 = st.tabs(["🌎 SEMUA", "👥 PNS", "👥 PPPK"])
-with t1: render_list(log_all, MASTER_ALL)
+with t1: render_list(log_all, list(DATABASE_INFO.keys()))
 with t2: render_list(log_all, MASTER_PNS)
 with t3: render_list(log_all, MASTER_PPPK)
