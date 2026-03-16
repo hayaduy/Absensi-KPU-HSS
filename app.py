@@ -146,7 +146,7 @@ with mid:
                  out = BytesIO(); pd.concat([df1, df2]).to_excel(out, index=False)
                  st.download_button("📥 REKAP TOTAL", out.getvalue(), "REKAP.xlsx")
     with col_d: 
-        if st.button("🖨️ DOWNLOAD"): pop_cetak()
+        if st.button("🖨️ DOWNLOAD LAPKIN"): pop_cetak()
 
 st.write("---")
 tab_all, tab_pns, tab_pppk = st.tabs(["🌎 SEMUA PEGAWAI", "👥 PNS", "👥 PPPK"])
